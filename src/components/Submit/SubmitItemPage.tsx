@@ -2,14 +2,12 @@ import { useState, useRef } from 'react';
 import { Upload, Camera, Video, Sparkles, AlertCircle, CheckCircle, X, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { aiService, ProductInfo, AIDiagnosis } from '../../services/aiService';
 import { uploadMultipleFiles, deleteFile, BUCKETS, validateFile } from '../../lib/storage';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Alert from '../UI/Alert';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import GeminiConfig from '../AI/GeminiConfig';
 
 type SubmitItemPageProps = {
   onNavigate: (page: string) => void;
@@ -19,7 +17,6 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
   const { user, refreshProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [aiDiagnosing, setAiDiagnosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,7 +30,6 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
   const [images, setImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
-  const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(null);
 
   const categories = [
     { value: 'electronics', label: 'Électronique' },
@@ -114,44 +110,12 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
     }
   };
 
-  const runAIDiagnosis = async () => {
+  const proceedToNextStep = () => {
     if (!formData.name || !formData.problemDescription) {
       setError('Veuillez remplir au moins le nom et la description du problème');
       return;
     }
-
-    setAiDiagnosing(true);
-    setError('');
-
-    try {
-      const productInfo: ProductInfo = {
-        name: formData.name,
-        category: formData.category,
-        brand: formData.brand,
-        problemDescription: formData.problemDescription,
-        images: images,
-        videos: videos
-      };
-
-      const diagnosis = await aiService.diagnoseProduct(productInfo);
-      setAiDiagnosis(diagnosis);
-      
-      // Mettre à jour les coûts estimés dans le formulaire
-      setFormData(prev => ({
-        ...prev,
-        estimatedCostMin: diagnosis.estimatedCostMin,
-        estimatedCostMax: diagnosis.estimatedCostMax
-      }));
-
-      // Passer à l'étape suivante
-      setStep(3);
-
-    } catch (error) {
-      console.error('Erreur diagnostic IA:', error);
-      setError('Erreur lors du diagnostic IA. Veuillez réessayer.');
-    } finally {
-      setAiDiagnosing(false);
-    }
+    setStep(3);
   };
 
   const handleSubmit = async () => {
@@ -183,11 +147,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
           problem_description: formData.problemDescription,
           images: images,
           videos: videos,
-          ai_diagnosis: aiDiagnosis,
-          estimated_cost_min: aiDiagnosis?.estimatedCostMin || null,
-          estimated_cost_max: aiDiagnosis?.estimatedCostMax || null,
           status: 'submitted',
-          solution_type: aiDiagnosis?.recommendedSolution || null,
         })
         .select()
         .single();
@@ -395,8 +355,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
             <div className="space-y-6">
               <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Télécharger Photos & Vidéos</h2>
 
-              {/* Configuration Gemini */}
-              <GeminiConfig />
+              {/* Zone de téléchargement */}
               <div className="border-2 border-dashed border-secondary-300 rounded-xl p-8 md:p-12 text-center hover:border-primary-400 transition-colors">
                 <Upload className="mx-auto text-secondary-400 mb-4" size={48} />
                 <p className="text-secondary-600 mb-2 text-sm md:text-base">
@@ -513,28 +472,6 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                 </div>
               )}
 
-              <Card className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
-                <div className="flex items-start space-x-3">
-                  <Sparkles className="text-primary-600 flex-shrink-0 mt-1" size={24} />
-                  <div>
-                    <h3 className="font-semibold text-secondary-900 mb-1">Diagnostic IA</h3>
-                    <p className="text-sm text-secondary-600 mb-4">
-                      Notre IA analysera vos photos et fournira une estimation de coût et des solutions possibles
-                    </p>
-                    <Button
-                      onClick={runAIDiagnosis}
-                      disabled={aiDiagnosing}
-                      loading={aiDiagnosing}
-                      size="sm"
-                      className="inline-flex items-center space-x-2"
-                    >
-                      <Sparkles size={16} />
-                      <span>Lancer le Diagnostic IA</span>
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={() => setStep(1)}
@@ -544,7 +481,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                   Retour
                 </Button>
                 <Button
-                  onClick={() => setStep(3)}
+                  onClick={proceedToNextStep}
                   className="flex-1"
                 >
                   Passer aux Solutions
@@ -555,57 +492,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
           {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Résultats du Diagnostic IA</h2>
-
-              {aiDiagnosis && (
-                <Card className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-secondary-900">Problèmes Détectés</h3>
-                    <span className="px-3 py-1 bg-primary-600 text-white text-sm rounded-full">
-                      {Math.round(aiDiagnosis.confidence * 100)}% Confiance
-                    </span>
-                  </div>
-
-                  <ul className="space-y-2 mb-6">
-                    {aiDiagnosis.detectedIssues.map((issue: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
-                        <span className="text-secondary-700 text-sm">{issue}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="grid grid-cols-2 gap-4 bg-white rounded-lg p-4">
-                    <div>
-                      <p className="text-sm text-secondary-600 mb-1">Coût Estimé</p>
-                      <p className="text-xl md:text-2xl font-bold text-secondary-900">
-                        {aiDiagnosis.estimatedCostMin}€ - {aiDiagnosis.estimatedCostMax}€
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-secondary-600 mb-1">Difficulté</p>
-                      <p className="text-xl md:text-2xl font-bold text-secondary-900 capitalize">
-                        {aiDiagnosis.repairDifficulty === 'easy' ? 'Facile' :
-                         aiDiagnosis.repairDifficulty === 'medium' ? 'Moyenne' : 'Difficile'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {aiDiagnosis.recommendedActions && aiDiagnosis.recommendedActions.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-semibold text-secondary-900 mb-2 text-sm">Actions Recommandées</h4>
-                      <ul className="space-y-1">
-                        {aiDiagnosis.recommendedActions.map((action: string, index: number) => (
-                          <li key={index} className="flex items-start space-x-2">
-                            <CheckCircle className="text-primary-600 flex-shrink-0 mt-0.5" size={14} />
-                            <span className="text-secondary-700 text-xs">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </Card>
-              )}
+              <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Confirmation de Soumission</h2>
 
               <Card className="p-6 bg-blue-50 border border-blue-200">
                 <p className="text-sm text-blue-800 mb-2 font-medium">Prochaines Étapes</p>

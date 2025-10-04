@@ -299,23 +299,6 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                   <h3 className="font-semibold text-secondary-900 mb-2 text-sm">Description du Problème</h3>
                   <p className="text-secondary-700 leading-relaxed text-sm">{item.problem_description}</p>
                 </div>
-
-                {item.ai_diagnosis && (
-                  <Card className="p-4 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
-                    <h3 className="font-semibold text-secondary-900 mb-3 text-sm">Diagnostic IA</h3>
-                    <div className="space-y-2">
-                      {item.ai_diagnosis.detectedIssues?.map((issue: string, index: number) => (
-                        <div key={index} className="flex items-start space-x-2">
-                          <CheckCircle
-                            className="text-primary-600 flex-shrink-0 mt-0.5"
-                            size={16}
-                          />
-                          <span className="text-secondary-700 text-xs">{issue}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
               </div>
             </Card>
 
