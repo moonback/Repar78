@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Item, Quote } from '../../lib/supabase';
+import Button from '../UI/Button';
+import Card from '../UI/Card';
+import LoadingSpinner from '../UI/LoadingSpinner';
 
 type ItemDetailPageProps = {
   itemId: string;
@@ -112,29 +115,29 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
   const solutions = [
     {
       id: 'home_repair',
-      title: 'Home Repair',
-      description: 'A repairer comes to your location',
+      title: 'Réparation à Domicile',
+      description: 'Un réparateur se déplace chez vous',
       icon: Home,
       color: 'from-blue-500 to-blue-600',
     },
     {
       id: 'workshop',
-      title: 'Workshop Drop-off',
-      description: 'Send item to repair workshop',
+      title: 'Dépôt en Atelier',
+      description: 'Envoyez l\'objet à l\'atelier de réparation',
       icon: Building,
       color: 'from-purple-500 to-purple-600',
     },
     {
       id: 'refurbish',
-      title: 'Refurbish & Sell',
-      description: 'Get offers from refurbishers',
+      title: 'Remise à Neuf & Vente',
+      description: 'Recevez des offres de remise à neuf',
       icon: Package,
-      color: 'from-emerald-500 to-emerald-600',
+      color: 'from-primary-500 to-primary-600',
     },
     {
       id: 'recycle',
-      title: 'Certified Recycling',
-      description: 'Recycle with certified partners',
+      title: 'Recyclage Certifié',
+      description: 'Recyclage avec des partenaires certifiés',
       icon: Recycle,
       color: 'from-amber-500 to-amber-600',
     },
@@ -156,60 +159,64 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <LoadingSpinner size="lg" className="mb-4" />
+          <p className="text-secondary-600 text-sm">Chargement des détails...</p>
+        </div>
       </div>
     );
   }
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Item not found</p>
-          <button
-            onClick={() => onNavigate('my-repairs')}
-            className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-          >
-            Back to My Repairs
-          </button>
+          <p className="text-secondary-600 mb-4">Objet non trouvé</p>
+          <Button onClick={() => onNavigate('my-repairs')}>
+            Retour à Mes Réparations
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white py-8">
+      <div className="container-mobile">
+        <Button
           onClick={() => onNavigate('my-repairs')}
-          className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6"
+          variant="ghost"
+          className="inline-flex items-center space-x-2 mb-6"
         >
-          <ArrowLeft size={20} />
-          <span>Back to My Repairs</span>
-        </button>
+          <ArrowLeft size={16} />
+          <span>Retour à Mes Réparations</span>
+        </Button>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm p-8">
+            <Card className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <h1 className="text-xl md:text-2xl font-bold text-secondary-900 mb-2">{item.name}</h1>
+                  <div className="flex items-center space-x-4 text-xs text-secondary-600">
                     <span className="capitalize">{item.category}</span>
                     {item.brand && <span>• {item.brand}</span>}
                   </div>
                 </div>
                 <div
-                  className={`px-4 py-2 rounded-lg font-semibold ${
+                  className={`px-3 py-1 rounded-lg font-semibold text-xs ${
                     item.status === 'submitted'
                       ? 'bg-blue-100 text-blue-700'
                       : item.status === 'quoted'
                       ? 'bg-purple-100 text-purple-700'
-                      : 'bg-emerald-100 text-emerald-700'
+                      : 'bg-primary-100 text-primary-700'
                   }`}
                 >
-                  {item.status.replace('_', ' ').toUpperCase()}
+                  {item.status === 'submitted' ? 'SOUMIS' : 
+                   item.status === 'quoted' ? 'DEVIS REÇUS' : 
+                   item.status === 'in_progress' ? 'EN COURS' : 
+                   item.status.replace('_', ' ').toUpperCase()}
                 </div>
               </div>
 
@@ -217,7 +224,7 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
               {getAllMedia().length > 0 ? (
                 <div className="space-y-4 mb-6">
                   {/* Image/vidéo principale */}
-                  <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                  <div className="aspect-video bg-secondary-100 rounded-xl overflow-hidden">
                     {getAllMedia()[0]?.type === 'image' ? (
                       <img
                         src={getAllMedia()[0].url}
@@ -234,7 +241,7 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                           controls
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
-                          <Play className="text-white" size={48} />
+                          <Play className="text-white" size={32} />
                         </div>
                       </div>
                     )}
@@ -246,7 +253,7 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                       {getAllMedia().slice(1, 5).map((media, index) => (
                         <div
                           key={index + 1}
-                          className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                          className="aspect-square bg-secondary-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => openMediaModal(index + 1)}
                         >
                           {media.type === 'image' ? (
@@ -262,15 +269,15 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                                 className="w-full h-full object-cover"
                               />
                               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                                <Play className="text-white" size={20} />
+                                <Play className="text-white" size={16} />
                               </div>
                             </div>
                           )}
                         </div>
                       ))}
                       {getAllMedia().length > 5 && (
-                        <div className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-600">
+                        <div className="aspect-square bg-secondary-200 rounded-lg flex items-center justify-center">
+                          <span className="text-xs font-medium text-secondary-600">
                             +{getAllMedia().length - 5}
                           </span>
                         </div>
@@ -279,44 +286,44 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                   )}
                 </div>
               ) : (
-                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center mb-6">
+                <div className="aspect-video bg-gradient-to-br from-primary-100 to-blue-100 rounded-xl flex items-center justify-center mb-6">
                   <div className="text-center">
-                    <Package className="text-blue-600 mx-auto mb-2" size={48} />
-                    <p className="text-gray-600 text-sm">Aucune image disponible</p>
+                    <Package className="text-primary-600 mx-auto mb-2" size={32} />
+                    <p className="text-secondary-600 text-xs">Aucune image disponible</p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Problem Description</h3>
-                  <p className="text-gray-700 leading-relaxed">{item.problem_description}</p>
+                  <h3 className="font-semibold text-secondary-900 mb-2 text-sm">Description du Problème</h3>
+                  <p className="text-secondary-700 leading-relaxed text-sm">{item.problem_description}</p>
                 </div>
 
                 {item.ai_diagnosis && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-6 border border-emerald-200">
-                    <h3 className="font-semibold text-gray-900 mb-4">AI Diagnosis</h3>
-                    <div className="space-y-3">
+                  <Card className="p-4 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
+                    <h3 className="font-semibold text-secondary-900 mb-3 text-sm">Diagnostic IA</h3>
+                    <div className="space-y-2">
                       {item.ai_diagnosis.detectedIssues?.map((issue: string, index: number) => (
                         <div key={index} className="flex items-start space-x-2">
                           <CheckCircle
-                            className="text-emerald-600 flex-shrink-0 mt-0.5"
-                            size={18}
+                            className="text-primary-600 flex-shrink-0 mt-0.5"
+                            size={16}
                           />
-                          <span className="text-gray-700">{issue}</span>
+                          <span className="text-secondary-700 text-xs">{issue}</span>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </Card>
                 )}
               </div>
-            </div>
+            </Card>
 
             {!item.solution_type && (
-              <div className="bg-white rounded-2xl shadow-sm p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose Your Solution</h2>
-                <p className="text-gray-600 mb-6">
-                  Select the repair option that works best for you
+              <Card className="p-6">
+                <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-3">Choisissez Votre Solution</h2>
+                <p className="text-secondary-600 mb-6 text-sm">
+                  Sélectionnez l'option de réparation qui vous convient le mieux
                 </p>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -324,30 +331,30 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                     <button
                       key={solution.id}
                       onClick={() => selectSolution(solution.id)}
-                      className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 text-left hover:border-emerald-400 transition-all hover:shadow-lg"
+                      className="group relative bg-white border-2 border-secondary-200 rounded-xl p-4 text-left hover:border-primary-400 transition-all hover:shadow-medium"
                     >
                       <div
-                        className={`inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br ${solution.color} text-white rounded-lg mb-4 group-hover:scale-110 transition-transform`}
+                        className={`inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br ${solution.color} text-white rounded-lg mb-3 group-hover:scale-110 transition-transform`}
                       >
-                        <solution.icon size={24} />
+                        <solution.icon size={20} />
                       </div>
-                      <h3 className="font-bold text-gray-900 mb-2">{solution.title}</h3>
-                      <p className="text-sm text-gray-600">{solution.description}</p>
+                      <h3 className="font-bold text-secondary-900 mb-2 text-sm">{solution.title}</h3>
+                      <p className="text-xs text-secondary-600">{solution.description}</p>
                     </button>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {item.solution_type && (
-              <div className="bg-white rounded-2xl shadow-sm p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Quotes Received</h2>
+              <Card className="p-6">
+                <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Devis Reçus</h2>
 
                 {quotes.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Clock className="mx-auto text-gray-400 mb-4" size={48} />
-                    <p className="text-gray-600">
-                      Waiting for quotes from repairers. You'll be notified when they arrive.
+                  <div className="text-center py-8">
+                    <Clock className="mx-auto text-secondary-400 mb-3" size={32} />
+                    <p className="text-secondary-600 text-sm">
+                      En attente des devis des réparateurs. Vous serez notifié quand ils arrivent.
                     </p>
                   </div>
                 ) : (
@@ -355,119 +362,124 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                     {quotes.map((quote: any) => (
                       <div
                         key={quote.id}
-                        className="border border-gray-200 rounded-xl p-6 hover:border-emerald-300 transition-colors"
+                        className="border border-secondary-200 rounded-xl p-4 hover:border-primary-300 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                              <User className="text-emerald-600" size={24} />
+                            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                              <User className="text-primary-600" size={20} />
                             </div>
                             <div>
-                              <h3 className="font-bold text-gray-900">
-                                {quote.repairer?.full_name || 'Professional Repairer'}
+                              <h3 className="font-bold text-secondary-900 text-sm">
+                                {quote.repairer?.full_name || 'Réparateur Professionnel'}
                               </h3>
-                              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <MapPin size={14} />
-                                <span>Local Area</span>
+                              <div className="flex items-center space-x-2 text-xs text-secondary-600">
+                                <MapPin size={12} />
+                                <span>Zone Locale</span>
                               </div>
                             </div>
                           </div>
 
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-gray-900">${quote.price}</p>
-                            <p className="text-sm text-gray-600">{quote.estimated_duration}</p>
+                            <p className="text-lg font-bold text-secondary-900">{quote.price}€</p>
+                            <p className="text-xs text-secondary-600">{quote.estimated_duration}</p>
                           </div>
                         </div>
 
                         {quote.message && (
-                          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <div className="bg-secondary-50 rounded-lg p-3 mb-3">
                             <div className="flex items-start space-x-2">
-                              <MessageSquare className="text-gray-400 flex-shrink-0 mt-1" size={16} />
-                              <p className="text-sm text-gray-700">{quote.message}</p>
+                              <MessageSquare className="text-secondary-400 flex-shrink-0 mt-1" size={14} />
+                              <p className="text-xs text-secondary-700">{quote.message}</p>
                             </div>
                           </div>
                         )}
 
                         {quote.status === 'pending' && (
-                          <button
+                          <Button
                             onClick={() => acceptQuote(quote.id)}
-                            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                            className="w-full"
+                            size="sm"
                           >
-                            Accept Quote
-                          </button>
+                            Accepter le Devis
+                          </Button>
                         )}
 
                         {quote.status === 'accepted' && (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center space-x-2 justify-center">
-                            <CheckCircle className="text-emerald-600" size={20} />
-                            <span className="text-emerald-700 font-semibold">Quote Accepted</span>
+                          <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 flex items-center space-x-2 justify-center">
+                            <CheckCircle className="text-primary-600" size={16} />
+                            <span className="text-primary-700 font-semibold text-sm">Devis Accepté</span>
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             )}
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <h3 className="font-bold text-gray-900 mb-4">Cost Estimate</h3>
+            <Card className="p-4">
+              <h3 className="font-bold text-secondary-900 mb-3 text-sm">Estimation des Coûts</h3>
               {item.estimated_cost_min && item.estimated_cost_max ? (
-                <div className="text-center py-4">
-                  <p className="text-3xl font-bold text-emerald-600 mb-1">
-                    ${item.estimated_cost_min} - ${item.estimated_cost_max}
+                <div className="text-center py-3">
+                  <p className="text-xl font-bold text-primary-600 mb-1">
+                    {item.estimated_cost_min}€ - {item.estimated_cost_max}€
                   </p>
-                  <p className="text-sm text-gray-600">AI Estimated Range</p>
+                  <p className="text-xs text-secondary-600">Fourchette Estimée par IA</p>
                 </div>
               ) : (
-                <p className="text-gray-600 text-center py-4">
-                  Waiting for quotes to determine cost
+                <p className="text-secondary-600 text-center py-3 text-sm">
+                  En attente des devis pour déterminer le coût
                 </p>
               )}
-            </div>
+            </Card>
 
-            <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-2xl shadow-sm p-6 border border-emerald-200">
-              <h3 className="font-bold text-gray-900 mb-4">Item Timeline</h3>
-              <div className="space-y-4">
+            <Card className="p-4 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
+              <h3 className="font-bold text-secondary-900 mb-3 text-sm">Chronologie de l'Objet</h3>
+              <div className="space-y-3">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="text-white" size={16} />
+                  <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="text-white" size={12} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Item Submitted</p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(item.created_at).toLocaleString()}
+                    <p className="font-semibold text-secondary-900 text-xs">Objet Soumis</p>
+                    <p className="text-xs text-secondary-600">
+                      {new Date(item.created_at).toLocaleString('fr-FR')}
                     </p>
                   </div>
                 </div>
 
                 {item.solution_type && (
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="text-white" size={16} />
+                    <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="text-white" size={12} />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">Solution Selected</p>
-                      <p className="text-sm text-gray-600 capitalize">
-                        {item.solution_type.replace('_', ' ')}
+                      <p className="font-semibold text-secondary-900 text-xs">Solution Sélectionnée</p>
+                      <p className="text-xs text-secondary-600 capitalize">
+                        {item.solution_type === 'home_repair' ? 'Réparation à domicile' :
+                         item.solution_type === 'workshop' ? 'Dépôt en atelier' :
+                         item.solution_type === 'refurbish' ? 'Remise à neuf' :
+                         item.solution_type === 'recycle' ? 'Recyclage' :
+                         item.solution_type.replace('_', ' ')}
                       </p>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="text-gray-400" size={16} />
+                  <div className="w-6 h-6 bg-secondary-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Clock className="text-secondary-400" size={12} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-600">Awaiting Quotes</p>
-                    <p className="text-sm text-gray-500">In progress</p>
+                    <p className="font-semibold text-secondary-600 text-xs">En Attente des Devis</p>
+                    <p className="text-xs text-secondary-500">En cours</p>
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
 
@@ -480,7 +492,7 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                 onClick={() => setShowMediaModal(false)}
                 className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
 
               {/* Navigation */}
@@ -491,14 +503,14 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
                     disabled={selectedMediaIndex === 0}
                   >
-                    <ArrowLeft size={24} />
+                    <ArrowLeft size={20} />
                   </button>
                   <button
                     onClick={() => setSelectedMediaIndex(Math.min(getAllMedia().length - 1, selectedMediaIndex + 1))}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
                     disabled={selectedMediaIndex === getAllMedia().length - 1}
                   >
-                    <ArrowLeft size={24} className="rotate-180" />
+                    <ArrowLeft size={20} className="rotate-180" />
                   </button>
                 </>
               )}
@@ -523,12 +535,12 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
 
               {/* Indicateur de position */}
               {getAllMedia().length > 1 && (
-                <div className="flex justify-center mt-4 space-x-2">
+                <div className="flex justify-center mt-3 space-x-2">
                   {getAllMedia().map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedMediaIndex(index)}
-                      className={`w-3 h-3 rounded-full transition-all ${
+                      className={`w-2 h-2 rounded-full transition-all ${
                         index === selectedMediaIndex ? 'bg-white' : 'bg-white bg-opacity-50'
                       }`}
                     />
@@ -538,11 +550,11 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
 
               {/* Miniatures en bas */}
               {getAllMedia().length > 1 && (
-                <div className="flex justify-center mt-4 space-x-2 max-w-4xl overflow-x-auto">
+                <div className="flex justify-center mt-3 space-x-2 max-w-4xl overflow-x-auto">
                   {getAllMedia().map((media, index) => (
                     <div
                       key={index}
-                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                      className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
                         index === selectedMediaIndex ? 'border-white' : 'border-transparent'
                       }`}
                       onClick={() => setSelectedMediaIndex(index)}
@@ -560,7 +572,7 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <Play className="text-white" size={16} />
+                            <Play className="text-white" size={12} />
                           </div>
                         </div>
                       )}
