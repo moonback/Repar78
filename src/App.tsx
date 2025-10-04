@@ -58,15 +58,14 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center">
         <div className="text-center animate-fade-in">
-          <LoadingSpinner size="lg" className="mb-6" />
-          <p className="text-secondary-600 text-lg font-medium">Chargement de CircularRepair...</p>
-          {user && !profile && (
-            <p className="text-sm text-secondary-500 mt-2">Chargement du profil utilisateur...</p>
-          )}
-          <div className="mt-4 text-xs text-secondary-400">
-            <p>Si le chargement prend trop de temps, actualisez la page</p>
+          <LoadingSpinner size="xl" className="mb-8" text="Chargement de CircularRepair..." />
+          <div className="mt-6 space-y-2">
+            <div className="w-64 h-2 bg-secondary-200 rounded-full overflow-hidden">
+              <div className="w-1/2 h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full animate-pulse"></div>
+            </div>
+            <p className="text-secondary-500 text-sm">Vérification de votre profil...</p>
           </div>
         </div>
       </div>
@@ -74,7 +73,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
       <Navbar
         onAuthClick={() => setAuthModalOpen(true)}
         onNavigate={handleNavigate}
@@ -111,94 +110,79 @@ function AppContent() {
 
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
-      {/* Footer caché sur mobile */}
-      <footer className="hidden md:block bg-secondary-900 text-white py-12 mt-20">
-        <div className="container-mobile">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-bold mb-4">CircularRepair</h3>
-              <p className="text-secondary-400 text-sm leading-relaxed">
-                Prolonger la durée de vie des produits, réduire les déchets électroniques et construire une économie circulaire durable.
+      {/* Footer modernisé - caché sur mobile */}
+      <footer className="hidden md:block bg-secondary-900 text-white mt-20">
+        <div className="container-responsive py-16">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
+            <div className="md:col-span-2">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="bg-gradient-to-br from-primary-400 to-primary-600 p-3 rounded-2xl shadow-lg">
+                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-300 bg-clip-text text-transparent">
+                    CircularRepair
+                  </h3>
+                  <p className="text-secondary-400 text-sm">Économie circulaire pour tous</p>
+                </div>
+              </div>
+              <p className="text-secondary-300 leading-relaxed max-w-md">
+                Prolonger la durée de vie des produits, réduire les déchets électroniques et construire une économie circulaire durable. Ensemble, créons un avenir plus responsable.
               </p>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Plateforme</h4>
-              <ul className="space-y-2 text-sm text-secondary-400">
-                <li>
+              <h4 className="font-semibold mb-6 text-lg">Plateforme</h4>
+              <nav className="space-y-3">
+                {[
+                  { label: 'Soumettre un Objet', action: () => handleNavigate('submit') },
+                  { label: 'Place de Marché', action: () => handleNavigate('marketplace') },
+                  { label: 'Mes Réparations', action: () => handleNavigate('my-repairs') },
+                ].map((item, index) => (
                   <button
-                    onClick={() => handleNavigate('submit')}
-                    className="hover:text-primary-400 transition-colors"
+                    key={index}
+                    onClick={item.action}
+                    className="block text-secondary-300 hover:text-primary-400 transition-colors duration-200 text-left w-full"
                   >
-                    Soumettre un Objet
+                    {item.label}
                   </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNavigate('marketplace')}
-                    className="hover:text-primary-400 transition-colors"
-                  >
-                    Place de Marché
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNavigate('my-repairs')}
-                    className="hover:text-primary-400 transition-colors"
-                  >
-                    Mes Réparations
-                  </button>
-                </li>
-              </ul>
+                ))}
+              </nav>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Pour les Réparateurs</h4>
-              <ul className="space-y-2 text-sm text-secondary-400">
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Devenir Réparateur
+              <h4 className="font-semibold mb-6 text-lg">Pour les Professionnels</h4>
+              <nav className="space-y-3">
+                {[
+                  'Devenir Réparateur',
+                  'Processus de Vérification',
+                  'Guide des Tarifs',
+                ].map((item, index) => (
+                  <a
+                    key={index}
+                    href="#"
+                    className="block text-secondary-300 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    {item}
                   </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Processus de Vérification
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Guide des Tarifs
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">À Propos</h4>
-              <ul className="space-y-2 text-sm text-secondary-400">
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Notre Mission
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Impact Environnemental
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary-400 transition-colors">
-                    Nous Contacter
-                  </a>
-                </li>
-              </ul>
+                ))}
+              </nav>
             </div>
           </div>
 
-          <div className="border-t border-secondary-800 mt-8 pt-8 text-center">
-            <p className="text-sm text-secondary-400">
-              &copy; {new Date().getFullYear()} CircularRepair. Construire un avenir durable ensemble.
-            </p>
+          <div className="border-t border-secondary-800 mt-12 pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="text-secondary-400 text-sm">
+                &copy; {new Date().getFullYear()} CircularRepair. Construire un avenir durable ensemble.
+              </p>
+              <div className="flex items-center space-x-6 text-sm text-secondary-400">
+                <a href="#" className="hover:text-primary-400 transition-colors">Politique de confidentialité</a>
+                <a href="#" className="hover:text-primary-400 transition-colors">Conditions d'utilisation</a>
+                <a href="#" className="hover:text-primary-400 transition-colors">Support</a>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

@@ -1,60 +1,80 @@
 import { forwardRef } from 'react';
-import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 interface AlertProps {
-  type?: 'success' | 'error' | 'warning' | 'info';
-  title?: string;
   children: React.ReactNode;
-  onClose?: () => void;
+  variant?: 'info' | 'success' | 'warning' | 'error';
   className?: string;
+  onClose?: () => void;
+  dismissible?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const Alert = forwardRef<HTMLDivElement, AlertProps>(
-  ({ type = 'info', title, children, onClose, className = '' }, ref) => {
-    const icons = {
-      success: CheckCircle,
-      error: AlertCircle,
-      warning: AlertCircle,
-      info: Info,
+  ({
+    children,
+    variant = 'info',
+    className = '',
+    onClose,
+    dismissible = false,
+    size = 'md'
+  }, ref) => {
+    const variants = {
+      info: {
+        container: 'bg-primary-50 border-primary-200 text-primary-800',
+        icon: Info,
+        iconColor: 'text-primary-600',
+      },
+      success: {
+        container: 'bg-success-50 border-success-200 text-success-800',
+        icon: CheckCircle,
+        iconColor: 'text-success-600',
+      },
+      warning: {
+        container: 'bg-warning-50 border-warning-200 text-warning-800',
+        icon: AlertTriangle,
+        iconColor: 'text-warning-600',
+      },
+      error: {
+        container: 'bg-error-50 border-error-200 text-error-800',
+        icon: AlertCircle,
+        iconColor: 'text-error-600',
+      },
     };
 
-    const colors = {
-      success: 'bg-green-50 border-green-200 text-green-800',
-      error: 'bg-red-50 border-red-200 text-red-800',
-      warning: 'bg-amber-50 border-amber-200 text-amber-800',
-      info: 'bg-blue-50 border-blue-200 text-blue-800',
+    const sizes = {
+      sm: 'p-3 text-sm',
+      md: 'p-4',
+      lg: 'p-5 text-lg',
     };
 
-    const iconColors = {
-      success: 'text-green-600',
-      error: 'text-red-600',
-      warning: 'text-amber-600',
-      info: 'text-blue-600',
-    };
+    const config = variants[variant];
+    const Icon = config.icon;
 
-    const Icon = icons[type];
+    const iconSizes = {
+      sm: 16,
+      md: 20,
+      lg: 24,
+    };
 
     return (
       <div
         ref={ref}
-        className={`rounded-xl border p-4 ${colors[type]} ${className}`}
+        className={`border-l-4 rounded-r-lg ${config.container} ${sizes[size]} ${className}`}
         role="alert"
       >
-        <div className="flex items-start">
-          <Icon className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${iconColors[type]}`} />
+        <div className="flex items-start gap-3">
+          <Icon className={`${config.iconColor} flex-shrink-0 mt-0.5`} size={iconSizes[size]} />
           <div className="flex-1">
-            {title && (
-              <h3 className="font-semibold mb-1">{title}</h3>
-            )}
-            <div className="text-sm">{children}</div>
+            {children}
           </div>
-          {onClose && (
+          {dismissible && onClose && (
             <button
               onClick={onClose}
-              className="ml-3 flex-shrink-0 hover:opacity-70 transition-opacity"
-              aria-label="Fermer"
+              className={`flex-shrink-0 ${config.iconColor} hover:opacity-75 transition-opacity`}
+              aria-label="Fermer l'alerte"
             >
-              <X className="h-4 w-4" />
+              <X size={iconSizes[size]} />
             </button>
           )}
         </div>

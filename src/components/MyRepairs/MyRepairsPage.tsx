@@ -11,6 +11,8 @@ import {
   Camera,
   Video,
   ExternalLink,
+  Plus,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Item, Quote } from '../../lib/supabase';
@@ -25,6 +27,7 @@ export default function MyRepairsPage({ onNavigate }: MyRepairsPageProps) {
   const [loading, setLoading] = useState(true);
   const [repairTracking, setRepairTracking] = useState<{[key: string]: string}>({});
   const [filter, setFilter] = useState<string>('all');
+  const [isAddingTestItems, setIsAddingTestItems] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -83,6 +86,163 @@ export default function MyRepairsPage({ onNavigate }: MyRepairsPageProps) {
       console.error('Error loading items:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addTestItems = async () => {
+    if (!user) return;
+
+    setIsAddingTestItems(true);
+    try {
+      const testItems = [
+        {
+          name: "iPhone 13 Pro",
+          category: "phones",
+          brand: "Apple",
+          problem_description: "L'écran est fissuré après une chute. L'affichage fonctionne mais il y a des lignes noires sur le côté droit. Le tactile répond encore correctement.",
+          status: "submitted" as const,
+          estimated_cost_min: 150,
+          estimated_cost_max: 280,
+        },
+        {
+          name: "MacBook Pro 15\"",
+          category: "computers",
+          brand: "Apple",
+          problem_description: "Le ventilateur fait un bruit anormal et l'ordinateur chauffe beaucoup. Performance ralentie lors de l'utilisation intensive.",
+          status: "quoted" as const,
+          estimated_cost_min: 80,
+          estimated_cost_max: 150,
+        },
+        {
+          name: "Lave-linge Samsung",
+          category: "appliances",
+          brand: "Samsung",
+          problem_description: "Le lave-linge ne se vide plus correctement. L'eau reste dans le tambour après le cycle de lavage.",
+          status: "in_progress" as const,
+          estimated_cost_min: 120,
+          estimated_cost_max: 200,
+        },
+        {
+          name: "Aspirateur Dyson V11",
+          category: "appliances",
+          brand: "Dyson",
+          problem_description: "L'aspirateur ne tient plus la charge. La batterie se décharge très rapidement même après une charge complète.",
+          status: "completed" as const,
+          estimated_cost_min: 60,
+          estimated_cost_max: 120,
+        },
+        {
+          name: "iPad Air 4",
+          category: "phones",
+          brand: "Apple",
+          problem_description: "L'écran tactile ne répond plus dans la partie inférieure. Le reste de la tablette fonctionne normalement.",
+          status: "submitted" as const,
+          estimated_cost_min: 200,
+          estimated_cost_max: 350,
+        },
+        {
+          name: "PS5",
+          category: "electronics",
+          brand: "Sony",
+          problem_description: "La console ne démarre plus. LED bleue qui clignote puis s'éteint. Aucun signal vidéo.",
+          status: "quoted" as const,
+          estimated_cost_min: 180,
+          estimated_cost_max: 300,
+        },
+        {
+          name: "Cafetière Delonghi",
+          category: "appliances",
+          brand: "Delonghi",
+          problem_description: "La cafetière ne chauffe plus l'eau. Le mécanisme de percolation fonctionne mais l'eau reste froide.",
+          status: "submitted" as const,
+          estimated_cost_min: 40,
+          estimated_cost_max: 80,
+        },
+        {
+          name: "Écouteurs AirPods Pro",
+          category: "electronics",
+          brand: "Apple",
+          problem_description: "Le casque gauche ne fonctionne plus. Aucun son ne sort, même après réinitialisation et nettoyage.",
+          status: "in_progress" as const,
+          estimated_cost_min: 80,
+          estimated_cost_max: 140,
+        },
+        {
+          name: "Imprimante Canon",
+          category: "electronics",
+          brand: "Canon",
+          problem_description: "L'imprimante affiche une erreur de papier bloqué même quand il n'y en a pas. Le papier s'enroule mal.",
+          status: "completed" as const,
+          estimated_cost_min: 30,
+          estimated_cost_max: 60,
+        },
+        {
+          name: "Grille-pain Philips",
+          category: "appliances",
+          brand: "Philips",
+          problem_description: "Le grille-pain ne grille plus uniformément. Un côté reste pâle tandis que l'autre brûle.",
+          status: "submitted" as const,
+          estimated_cost_min: 25,
+          estimated_cost_max: 45,
+        },
+      ];
+
+      // Insérer les éléments de test dans la base de données
+      const { data: insertedItems, error } = await supabase
+        .from('items')
+        .insert(
+          testItems.map(item => ({
+            ...item,
+            user_id: user.id,
+            images: [],
+            videos: [],
+          }))
+        )
+        .select();
+
+      if (error) throw error;
+
+      console.log(`${insertedItems.length} éléments de test ajoutés avec succès`);
+      
+      // Créer des entrées de réparation pour les nouveaux éléments
+      if (insertedItems && insertedItems.length > 0) {
+        const repairEntries = insertedItems.map(item => ({
+          item_id: item.id,
+          quote_id: null,
+          repairer_id: null,
+          status: item.status === 'completed' ? 'completed' as const : 'diagnostic' as const,
+          tracking_updates: [
+            {
+              timestamp: new Date().toISOString(),
+              status: item.status === 'completed' ? 'completed' : 'diagnostic',
+              message: item.status === 'completed' ? 'Réparation terminée' : 'Objet soumis, en attente de diagnostic',
+              repairer_id: null
+            }
+          ],
+          completion_photos: [],
+          started_at: new Date().toISOString(),
+          completed_at: item.status === 'completed' ? new Date().toISOString() : null
+        }));
+
+        const { error: repairError } = await supabase
+          .from('repairs')
+          .insert(repairEntries);
+
+        if (repairError) {
+          console.warn('Erreur lors de la création des entrées de réparation:', repairError);
+        } else {
+          console.log('Entrées de réparation créées avec succès');
+        }
+      }
+      
+      // Recharger la liste des éléments et le tracking
+      await loadItems();
+      await loadRepairTracking();
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout des éléments de test:', error);
+    } finally {
+      setIsAddingTestItems(false);
     }
   };
 
@@ -152,8 +312,29 @@ export default function MyRepairsPage({ onNavigate }: MyRepairsPageProps) {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Mes Réparations</h1>
-          <p className="text-lg text-gray-600">Suivez vos demandes de réparation et leur statut</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Mes Réparations</h1>
+              <p className="text-lg text-gray-600">Suivez vos demandes de réparation et leur statut</p>
+            </div>
+            <button
+              onClick={addTestItems}
+              disabled={isAddingTestItems}
+              className="mt-4 sm:mt-0 inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAddingTestItems ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Ajout en cours...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  <span>Ajouter des produits de test</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-8">

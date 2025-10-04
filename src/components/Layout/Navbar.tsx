@@ -35,31 +35,34 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
     : [{ id: 'home', label: 'Accueil' }];
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm shadow-soft sticky top-0 z-40 safe-area-inset">
-      <div className="container-mobile">
+    <nav className="glass-strong sticky top-0 z-50 safe-area-inset border-b border-secondary-200/50">
+      <div className="container-responsive">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {/* Logo modernisé */}
           <button
             onClick={() => onNavigate('home')}
-            className="flex items-center space-x-3 group"
+            className="flex items-center space-x-3 group hover-lift"
           >
-            <div className="bg-gradient-to-br from-primary-100 to-primary-200 p-2.5 rounded-xl group-hover:from-primary-200 group-hover:to-primary-300 transition-all duration-200 shadow-soft group-hover:shadow-medium">
-              <Leaf className="text-primary-600 group-hover:text-primary-700" size={24} />
+            <div className="bg-gradient-to-br from-primary-500 to-primary-600 p-2.5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+              <Leaf className="text-white group-hover:scale-110 transition-transform duration-200" size={24} />
             </div>
-            <span className="text-base font-bold text-secondary-800 group-hover:text-primary-700 transition-colors hidden sm:block">
-              CircularRepair
-            </span>
+            <div className="hidden sm:block">
+              <span className="text-lg font-bold text-secondary-900 group-hover:text-primary-700 transition-colors">
+                CircularRepair
+              </span>
+              <p className="text-xs text-secondary-500 -mt-1">Réparation circulaire</p>
+            </div>
           </button>
 
-          {/* Navigation Desktop */}
-          <div className="hidden lg:flex items-center space-x-1">
+          {/* Navigation Desktop modernisée */}
+          <div className="hidden lg:flex items-center space-x-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                className={`px-4 py-2.5 rounded-xl font-medium transition-all duration-200 hover-scale ${
                   currentPage === item.id
-                    ? 'bg-primary-100 text-primary-700 shadow-soft'
+                    ? 'bg-primary-100 text-primary-700 shadow-sm border border-primary-200'
                     : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
                 }`}
               >
@@ -68,11 +71,11 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
             ))}
           </div>
 
-          {/* Actions Desktop */}
+          {/* Actions Desktop modernisées */}
           <div className="hidden lg:flex items-center space-x-3">
             {user ? (
               <>
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200 shadow-sm">
                   <Leaf size={16} className="text-primary-600" />
                   <span className="text-sm font-bold text-primary-700">
                     {profile?.eco_points || 0}
@@ -81,7 +84,7 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
                 </div>
                 <button
                   onClick={() => onNavigate('profile')}
-                  className="flex items-center space-x-2 px-3 py-2 bg-secondary-100 hover:bg-secondary-200 rounded-xl transition-colors group"
+                  className="flex items-center space-x-2 px-3 py-2 bg-secondary-100 hover:bg-secondary-200 rounded-xl transition-all duration-200 group"
                   title="Mon Profil"
                 >
                   <User size={16} className="text-secondary-600 group-hover:text-secondary-800" />
@@ -91,23 +94,23 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="p-2 text-secondary-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors"
+                  className="p-2.5 text-secondary-600 hover:bg-error-50 hover:text-error-600 rounded-xl transition-all duration-200"
                   title="Déconnexion"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={18} />
                 </button>
               </>
             ) : (
-              <Button onClick={onAuthClick} size="sm">
+              <Button onClick={onAuthClick} size="sm" variant="outline">
                 Connexion
               </Button>
             )}
           </div>
 
-          {/* Menu Mobile */}
+          {/* Menu Mobile modernisé */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 text-secondary-600 hover:bg-secondary-100 rounded-xl transition-colors"
+            className="lg:hidden p-2.5 text-secondary-600 hover:bg-secondary-100 rounded-xl transition-all duration-200"
             aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -115,10 +118,10 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
         </div>
       </div>
 
-      {/* Menu Mobile Dropdown */}
+      {/* Menu Mobile Dropdown modernisé */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-secondary-200 bg-white shadow-medium animate-slide-up">
-          <div className="container-mobile py-4 space-y-1">
+        <div className="lg:hidden border-t border-secondary-200/50 bg-white/95 backdrop-blur-sm shadow-lg animate-slide-down">
+          <div className="container-responsive py-6 space-y-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -126,9 +129,9 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
                   onNavigate(item.id);
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 hover-lift ${
                   currentPage === item.id
-                    ? 'bg-primary-100 text-primary-700 shadow-soft'
+                    ? 'bg-primary-100 text-primary-700 shadow-sm border border-primary-200'
                     : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
                 }`}
               >
@@ -138,13 +141,13 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
 
             {user ? (
               <>
-                <div className="border-t border-secondary-200 pt-3 mt-3">
+                <div className="border-t border-secondary-200/50 pt-4 mt-4 space-y-3">
                   <button
                     onClick={() => {
                       onNavigate('profile');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-colors flex items-center space-x-3 ${
+                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-3 hover-lift ${
                       currentPage === 'profile'
                         ? 'bg-primary-100 text-primary-700'
                         : 'text-secondary-600 hover:bg-secondary-100'
@@ -153,32 +156,36 @@ export default function Navbar({ onAuthClick, onNavigate, currentPage }: NavbarP
                     <User size={18} className="text-secondary-500" />
                     <span>Mon Profil</span>
                   </button>
-                </div>
-                
-                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200">
-                  <div className="flex items-center space-x-2">
-                    <Leaf size={16} className="text-primary-600" />
-                    <span className="text-sm font-medium text-secondary-700">Points Éco</span>
+
+                  <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200 mx-1">
+                    <div className="flex items-center space-x-2">
+                      <Leaf size={16} className="text-primary-600" />
+                      <span className="text-sm font-medium text-secondary-700">Points Éco</span>
+                    </div>
+                    <span className="text-lg font-bold text-primary-700">
+                      {profile?.eco_points || 0}
+                    </span>
                   </div>
-                  <span className="text-lg font-bold text-primary-700">
-                    {profile?.eco_points || 0}
-                  </span>
+
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-3 text-error-600 hover:bg-error-50 rounded-xl font-medium transition-all duration-200 flex items-center space-x-3"
+                  >
+                    <LogOut size={18} />
+                    <span>Déconnexion</span>
+                  </button>
                 </div>
-                
-                <button
-                  onClick={handleSignOut}
-                  className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors flex items-center space-x-3"
-                >
-                  <LogOut size={18} />
-                  <span>Déconnexion</span>
-                </button>
               </>
             ) : (
-              <div className="border-t border-secondary-200 pt-3 mt-3">
-                <Button onClick={() => {
-                  onAuthClick();
-                  setMobileMenuOpen(false);
-                }} className="w-full">
+              <div className="border-t border-secondary-200/50 pt-4 mt-4">
+                <Button
+                  onClick={() => {
+                    onAuthClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full"
+                  size="lg"
+                >
                   Se Connecter
                 </Button>
               </div>
