@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import AuthModal from './components/Auth/AuthModal';
@@ -11,10 +11,35 @@ import MarketplacePage from './components/Marketplace/MarketplacePage';
 import ProfilePage from './components/Profile/ProfilePage';
 
 function AppContent() {
-  const { loading, user, profile } = useAuth();
+  const { loading, user, profile, refreshProfile } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Forcer le rechargement du profil si l'utilisateur est connecté mais le profil n'est pas chargé
+  useEffect(() => {
+    console.log('🔍 App useEffect déclenché:', {
+      hasUser: !!user,
+      userId: user?.id,
+      hasProfile: !!profile,
+      isLoading: loading,
+      shouldRefresh: user && !profile && !loading
+    });
+    
+    if (user && !profile && !loading) {
+      console.log('🔄 Utilisateur connecté mais profil manquant, rechargement programmé...');
+      // Petit délai pour éviter les rechargements trop rapides
+      const timer = setTimeout(() => {
+        console.log('⏰ Timer déclenché, appel de refreshProfile...');
+        refreshProfile();
+      }, 500);
+      
+      return () => {
+        console.log('🧹 Nettoyage du timer...');
+        clearTimeout(timer);
+      };
+    }
+  }, [user, profile, loading, refreshProfile]);
 
   const handleNavigate = (page: string, itemId?: string) => {
     setCurrentPage(page);
@@ -32,6 +57,9 @@ function AppContent() {
           {user && !profile && (
             <p className="text-sm text-gray-500 mt-2">Chargement du profil utilisateur...</p>
           )}
+          <div className="mt-4 text-xs text-gray-400">
+            <p>Si le chargement prend trop de temps, actualisez la page</p>
+          </div>
         </div>
       </div>
     );
