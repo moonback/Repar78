@@ -1,17 +1,21 @@
-import { useState } from 'react';
-import { Upload, Camera, Video, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Upload, Camera, Video, Sparkles, AlertCircle, CheckCircle, X, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { uploadMultipleFiles, deleteFile, BUCKETS, validateFile } from '../../lib/storage';
 
 type SubmitItemPageProps = {
   onNavigate: (page: string) => void;
 };
 
 export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [aiDiagnosing, setAiDiagnosing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -20,21 +24,87 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
     problemDescription: '',
   });
 
+  const [images, setImages] = useState<string[]>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [aiDiagnosis, setAiDiagnosis] = useState<any>(null);
 
   const categories = [
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'appliances', label: 'Appliances' },
-    { value: 'phones', label: 'Phones & Tablets' },
-    { value: 'computers', label: 'Computers' },
-    { value: 'home', label: 'Home & Garden' },
-    { value: 'other', label: 'Other' },
+    { value: 'electronics', label: 'Électronique' },
+    { value: 'appliances', label: 'Électroménager' },
+    { value: 'phones', label: 'Téléphones & Tablettes' },
+    { value: 'computers', label: 'Ordinateurs' },
+    { value: 'home', label: 'Maison & Jardin' },
+    { value: 'other', label: 'Autre' },
   ];
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileUpload = async (files: FileList | null, type: 'images' | 'videos') => {
+    if (!files) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const fileArray = Array.from(files);
+      const fileType = type === 'images' ? 'image' : 'video';
+      
+      console.log(`Upload de ${fileArray.length} fichiers de type ${fileType}`);
+
+      // Utiliser la nouvelle librairie de stockage
+      const uploadedFiles = await uploadMultipleFiles(
+        fileArray,
+        BUCKETS.ITEM_MEDIA,
+        type,
+        fileType
+      );
+
+      const uploadedUrls = uploadedFiles.map(file => file.url);
+
+      if (type === 'images') {
+        setImages(prev => [...prev, ...uploadedUrls]);
+      } else {
+        setVideos(prev => [...prev, ...uploadedUrls]);
+      }
+
+      console.log(`${uploadedUrls.length} fichiers uploadés avec succès`);
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload:', error);
+      setError(error.message || 'Erreur lors de l\'upload des fichiers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeMedia = async (url: string, type: 'images' | 'videos') => {
+    try {
+      // Extraire le nom du fichier de l'URL
+      const fileName = url.split('/').pop();
+      const filePath = `${type}/${fileName}`;
+
+      // Supprimer le fichier du bucket
+      await deleteFile(BUCKETS.ITEM_MEDIA, filePath);
+      console.log(`Fichier supprimé: ${filePath}`);
+
+      // Retirer de l'interface
+      if (type === 'images') {
+        setImages(prev => prev.filter(img => img !== url));
+      } else {
+        setVideos(prev => prev.filter(vid => vid !== url));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du fichier:', error);
+      // Retirer quand même de l'interface
+      if (type === 'images') {
+        setImages(prev => prev.filter(img => img !== url));
+      } else {
+        setVideos(prev => prev.filter(vid => vid !== url));
+      }
+    }
   };
 
   const simulateAIDiagnosis = () => {
@@ -59,63 +129,140 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!user) {
+      setError('Vous devez être connecté pour soumettre un objet');
+      return;
+    }
 
     setLoading(true);
+    setError(null);
+
     try {
-      const { data, error } = await supabase.from('items').insert({
+      console.log('Soumission de l\'objet...', {
         user_id: user.id,
         name: formData.name,
         category: formData.category,
-        brand: formData.brand,
-        problem_description: formData.problemDescription,
-        ai_diagnosis: aiDiagnosis,
-        estimated_cost_min: aiDiagnosis?.estimatedCostMin,
-        estimated_cost_max: aiDiagnosis?.estimatedCostMax,
-        status: 'submitted',
-      }).select();
-
-      if (error) throw error;
-
-      await supabase.from('eco_transactions').insert({
-        user_id: user.id,
-        points: 10,
-        reason: 'Item submitted for repair',
-        related_id: data?.[0]?.id,
+        images: images.length,
+        videos: videos.length
       });
 
-      await supabase
-        .from('profiles')
-        .update({ eco_points: (await getEcoPoints()) + 10 })
-        .eq('id', user.id);
+      // Insérer l'objet dans la base de données
+      const { data: itemData, error: itemError } = await supabase
+        .from('items')
+        .insert({
+          user_id: user.id,
+          name: formData.name,
+          category: formData.category,
+          brand: formData.brand || null,
+          problem_description: formData.problemDescription,
+          images: images,
+          videos: videos,
+          ai_diagnosis: aiDiagnosis,
+          estimated_cost_min: aiDiagnosis?.estimatedCostMin || null,
+          estimated_cost_max: aiDiagnosis?.estimatedCostMax || null,
+          status: 'submitted',
+          solution_type: aiDiagnosis?.recommendedSolution || null,
+        })
+        .select()
+        .single();
 
-      onNavigate('my-repairs');
-    } catch (error) {
-      console.error('Error submitting item:', error);
+      if (itemError) {
+        console.error('Erreur lors de l\'insertion de l\'objet:', itemError);
+        throw itemError;
+      }
+
+      console.log('Objet créé avec succès:', itemData.id);
+
+      // Ajouter des points éco pour la soumission
+      const { error: ecoTransactionError } = await supabase
+        .from('eco_transactions')
+        .insert({
+          user_id: user.id,
+          points: 10,
+          reason: 'Objet soumis pour réparation',
+          related_id: itemData.id,
+        });
+
+      if (ecoTransactionError) {
+        console.error('Erreur lors de l\'ajout des points éco:', ecoTransactionError);
+      }
+
+      // Mettre à jour le profil utilisateur avec les nouveaux points
+      await refreshProfile();
+
+      console.log('Soumission réussie !');
+      setSuccess(true);
+
+      // Rediriger vers la page des réparations après 2 secondes
+      setTimeout(() => {
+        onNavigate('my-repairs');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Erreur lors de la soumission:', error);
+      
+      let errorMessage = 'Une erreur est survenue lors de la soumission';
+      
+      if (error.message) {
+        if (error.message.includes('violates row-level security')) {
+          errorMessage = 'Erreur de permissions. Veuillez vous reconnecter.';
+        } else if (error.message.includes('duplicate key')) {
+          errorMessage = 'Cet objet existe déjà.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const getEcoPoints = async () => {
-    if (!user) return 0;
-    const { data } = await supabase
-      .from('profiles')
-      .select('eco_points')
-      .eq('id', user.id)
-      .single();
-    return data?.eco_points || 0;
+  // Fonction pour réinitialiser le formulaire
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      category: 'electronics',
+      brand: '',
+      problemDescription: '',
+    });
+    setImages([]);
+    setVideos([]);
+    setAiDiagnosis(null);
+    setStep(1);
+    setError(null);
+    setSuccess(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Submit Your Item</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Soumettre votre Objet</h1>
           <p className="text-lg text-gray-600">
-            Let's get your item repaired and earn eco-points
+            Faisons réparer votre objet et gagnez des points éco
           </p>
         </div>
+
+        {/* Messages d'erreur et de succès */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="text-red-600" size={20} />
+              <p className="text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="text-green-600" size={20} />
+              <p className="text-green-700">Objet soumis avec succès ! Redirection vers vos réparations...</p>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-4">
@@ -145,24 +292,25 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Item Details</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Détails de l'Objet</h2>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Item Name
+                  Nom de l'objet *
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="e.g., iPhone 12 Pro"
+                  placeholder="ex: iPhone 12 Pro"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>
                 <select
                   name="category"
                   value={formData.category}
@@ -179,29 +327,30 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Brand (Optional)
+                  Marque (optionnel)
                 </label>
                 <input
                   type="text"
                   name="brand"
                   value={formData.brand}
                   onChange={handleInputChange}
-                  placeholder="e.g., Apple"
+                  placeholder="ex: Apple, Samsung, etc."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Problem Description
+                  Description du problème *
                 </label>
                 <textarea
                   name="problemDescription"
                   value={formData.problemDescription}
                   onChange={handleInputChange}
                   rows={4}
-                  placeholder="Describe what's wrong with your item..."
+                  placeholder="Décrivez ce qui ne va pas avec votre objet..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"
+                  required
                 />
               </div>
 
@@ -210,44 +359,137 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                 disabled={!formData.name || !formData.problemDescription}
                 className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next: Upload Media
+                Suivant : Télécharger des Médias
               </button>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Upload Photos & Videos</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Télécharger Photos & Vidéos</h2>
 
+              {/* Zone de téléchargement */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-emerald-400 transition-colors">
                 <Upload className="mx-auto text-gray-400 mb-4" size={48} />
                 <p className="text-gray-600 mb-2">
-                  Drag and drop files here, or click to select
+                  Glissez-déposez vos fichiers ici, ou cliquez pour sélectionner
                 </p>
                 <p className="text-sm text-gray-500">
-                  Photos and videos help us diagnose the problem
+                  Les photos et vidéos nous aident à diagnostiquer le problème
                 </p>
 
                 <div className="flex justify-center gap-4 mt-6">
-                  <button className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
-                    <Camera size={20} />
-                    <span>Add Photos</span>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loading}
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+                        <span>Upload...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={20} />
+                        <span>Ajouter des Photos</span>
+                      </>
+                    )}
                   </button>
-                  <button className="inline-flex items-center space-x-2 px-6 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
-                    <Video size={20} />
-                    <span>Add Video</span>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loading}
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-purple-700 border-t-transparent rounded-full animate-spin" />
+                        <span>Upload...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Video size={20} />
+                        <span>Ajouter des Vidéos</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      // Séparer les images et vidéos
+                      const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+                      const videoFiles = Array.from(files).filter(file => file.type.startsWith('video/'));
+                      
+                      if (imageFiles.length > 0) handleFileUpload(imageFiles as any, 'images');
+                      if (videoFiles.length > 0) handleFileUpload(videoFiles as any, 'videos');
+                    }
+                  }}
+                  className="hidden"
+                />
               </div>
+
+              {/* Affichage des médias téléchargés */}
+              {(images.length > 0 || videos.length > 0) && (
+                <div className="space-y-4">
+                  {images.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Photos ({images.length})</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={image}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                            <button
+                              onClick={() => removeMedia(image, 'images')}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {videos.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Vidéos ({videos.length})</h3>
+                      <div className="space-y-2">
+                        {videos.map((video, index) => (
+                          <div key={index} className="relative group flex items-center space-x-3 bg-gray-100 rounded-lg p-3">
+                            <Video className="text-purple-600" size={24} />
+                            <span className="text-gray-700 flex-1">Vidéo {index + 1}</span>
+                            <button
+                              onClick={() => removeMedia(video, 'videos')}
+                              className="bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-6 border border-emerald-200">
                 <div className="flex items-start space-x-3">
                   <Sparkles className="text-emerald-600 flex-shrink-0 mt-1" size={24} />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">AI-Powered Diagnosis</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">Diagnostic IA</h3>
                     <p className="text-sm text-gray-600 mb-4">
-                      Our AI will analyze your photos and provide an estimated cost range and
-                      possible solutions
+                      Notre IA analysera vos photos et fournira une estimation de coût et des solutions possibles
                     </p>
                     <button
                       onClick={simulateAIDiagnosis}
@@ -257,12 +499,12 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                       {aiDiagnosing ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Analyzing...</span>
+                          <span>Analyse en cours...</span>
                         </>
                       ) : (
                         <>
                           <Sparkles size={16} />
-                          <span>Run AI Diagnosis</span>
+                          <span>Lancer le Diagnostic IA</span>
                         </>
                       )}
                     </button>
@@ -275,13 +517,13 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                   onClick={() => setStep(1)}
                   className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Back
+                  Retour
                 </button>
                 <button
                   onClick={() => setStep(3)}
                   className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
                 >
-                  Skip to Solutions
+                  Passer aux Solutions
                 </button>
               </div>
             </div>
@@ -289,14 +531,14 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
           {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Diagnosis Results</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Résultats du Diagnostic IA</h2>
 
               {aiDiagnosis && (
                 <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-6 border border-emerald-200">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Detected Issues</h3>
+                    <h3 className="font-semibold text-gray-900">Problèmes Détectés</h3>
                     <span className="px-3 py-1 bg-emerald-600 text-white text-sm rounded-full">
-                      {Math.round(aiDiagnosis.confidence * 100)}% Confidence
+                      {Math.round(aiDiagnosis.confidence * 100)}% Confiance
                     </span>
                   </div>
 
@@ -311,13 +553,13 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
                   <div className="grid grid-cols-2 gap-4 bg-white rounded-lg p-4">
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Estimated Cost</p>
+                      <p className="text-sm text-gray-600 mb-1">Coût Estimé</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        ${aiDiagnosis.estimatedCostMin} - ${aiDiagnosis.estimatedCostMax}
+                        {aiDiagnosis.estimatedCostMin}€ - {aiDiagnosis.estimatedCostMax}€
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Complexity</p>
+                      <p className="text-sm text-gray-600 mb-1">Complexité</p>
                       <p className="text-2xl font-bold text-gray-900">
                         {aiDiagnosis.repairComplexity}
                       </p>
@@ -327,10 +569,10 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
               )}
 
               <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                <p className="text-sm text-blue-800 mb-2 font-medium">Next Steps</p>
+                <p className="text-sm text-blue-800 mb-2 font-medium">Prochaines Étapes</p>
                 <p className="text-gray-700">
-                  Your item will be visible to verified repairers who can provide detailed quotes.
-                  You'll receive notifications when quotes arrive.
+                  Votre objet sera visible par les réparateurs vérifiés qui pourront fournir des devis détaillés.
+                  Vous recevrez des notifications quand les devis arrivent.
                 </p>
               </div>
 
@@ -340,9 +582,9 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                     <Sparkles size={20} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Earn 10 Eco Points</p>
+                    <p className="font-semibold text-gray-900">Gagnez 10 Points Éco</p>
                     <p className="text-sm text-gray-600">
-                      For submitting an item for repair instead of discarding it
+                      Pour avoir soumis un objet à réparer au lieu de le jeter
                     </p>
                   </div>
                 </div>
@@ -353,14 +595,14 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                   onClick={() => setStep(2)}
                   className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Back
+                  Retour
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || success}
                   className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Submitting...' : 'Submit Item'}
+                  {loading ? 'Soumission en cours...' : success ? 'Soumis !' : 'Soumettre l\'Objet'}
                 </button>
               </div>
             </div>

@@ -11,7 +11,7 @@ import MarketplacePage from './components/Marketplace/MarketplacePage';
 import ProfilePage from './components/Profile/ProfilePage';
 
 function AppContent() {
-  const { loading } = useAuth();
+  const { loading, user, profile } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -28,7 +28,10 @@ function AppContent() {
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading CircularRepair...</p>
+          <p className="text-gray-600">Chargement de CircularRepair...</p>
+          {user && !profile && (
+            <p className="text-sm text-gray-500 mt-2">Chargement du profil utilisateur...</p>
+          )}
         </div>
       </div>
     );

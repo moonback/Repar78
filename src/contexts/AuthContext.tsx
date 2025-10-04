@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
 
@@ -20,8 +20,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingProfileRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    let mounted = true;
+
     // Vérifier la session existante au démarrage
     const initializeAuth = async () => {
       try {
@@ -29,21 +32,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (error) {
           console.error('Erreur lors de la récupération de la session:', error);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
         
-        if (session?.user) {
+        if (session?.user && mounted) {
           await loadProfile(session.user.id);
-        } else {
+        } else if (mounted) {
           setLoading(false);
         }
       } catch (error) {
         console.error('Erreur lors de l\'initialisation de l\'authentification:', error);
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -54,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -66,10 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadProfile = async (userId: string) => {
+    // Éviter les chargements multiples simultanés
+    if (loadingProfileRef.current.has(userId)) {
+      console.log('Profil déjà en cours de chargement pour:', userId);
+      return;
+    }
+
+    loadingProfileRef.current.add(userId);
+
     try {
       console.log('Chargement du profil pour l\'utilisateur:', userId);
       
@@ -91,11 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
     } finally {
       setLoading(false);
+      loadingProfileRef.current.delete(userId);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
+      // Forcer le rechargement en retirant l'ID du Set
+      loadingProfileRef.current.delete(user.id);
       await loadProfile(user.id);
     }
   };
