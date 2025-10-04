@@ -2,12 +2,14 @@ import { useState, useRef } from 'react';
 import { Upload, Camera, Video, Sparkles, AlertCircle, CheckCircle, X, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { aiService, ProductInfo, AIDiagnosis } from '../../services/aiService';
 import { uploadMultipleFiles, deleteFile, BUCKETS, validateFile } from '../../lib/storage';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Alert from '../UI/Alert';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import GeminiConfig from '../AI/GeminiConfig';
 
 type SubmitItemPageProps = {
   onNavigate: (page: string) => void;
@@ -31,7 +33,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
   const [images, setImages] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
-  const [aiDiagnosis, setAiDiagnosis] = useState<any>(null);
+  const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(null);
 
   const categories = [
     { value: 'electronics', label: 'Électronique' },
@@ -112,25 +114,44 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
     }
   };
 
-  const simulateAIDiagnosis = () => {
+  const runAIDiagnosis = async () => {
+    if (!formData.name || !formData.problemDescription) {
+      setError('Veuillez remplir au moins le nom et la description du problème');
+      return;
+    }
+
     setAiDiagnosing(true);
-    setTimeout(() => {
-      const diagnosis = {
-        detectedIssues: [
-          'Battery not holding charge',
-          'Possible charging port damage',
-          'Software optimization needed',
-        ],
-        estimatedCostMin: 45,
-        estimatedCostMax: 120,
-        repairComplexity: 'Medium',
-        recommendedSolution: 'workshop',
-        confidence: 0.87,
+    setError('');
+
+    try {
+      const productInfo: ProductInfo = {
+        name: formData.name,
+        category: formData.category,
+        brand: formData.brand,
+        problemDescription: formData.problemDescription,
+        images: images,
+        videos: videos
       };
+
+      const diagnosis = await aiService.diagnoseProduct(productInfo);
       setAiDiagnosis(diagnosis);
-      setAiDiagnosing(false);
+      
+      // Mettre à jour les coûts estimés dans le formulaire
+      setFormData(prev => ({
+        ...prev,
+        estimatedCostMin: diagnosis.estimatedCostMin,
+        estimatedCostMax: diagnosis.estimatedCostMax
+      }));
+
+      // Passer à l'étape suivante
       setStep(3);
-    }, 2000);
+
+    } catch (error) {
+      console.error('Erreur diagnostic IA:', error);
+      setError('Erreur lors du diagnostic IA. Veuillez réessayer.');
+    } finally {
+      setAiDiagnosing(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -374,7 +395,8 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
             <div className="space-y-6">
               <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Télécharger Photos & Vidéos</h2>
 
-              {/* Zone de téléchargement */}
+              {/* Configuration Gemini */}
+              <GeminiConfig />
               <div className="border-2 border-dashed border-secondary-300 rounded-xl p-8 md:p-12 text-center hover:border-primary-400 transition-colors">
                 <Upload className="mx-auto text-secondary-400 mb-4" size={48} />
                 <p className="text-secondary-600 mb-2 text-sm md:text-base">
@@ -500,7 +522,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                       Notre IA analysera vos photos et fournira une estimation de coût et des solutions possibles
                     </p>
                     <Button
-                      onClick={simulateAIDiagnosis}
+                      onClick={runAIDiagnosis}
                       disabled={aiDiagnosing}
                       loading={aiDiagnosing}
                       size="sm"
@@ -561,12 +583,27 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-secondary-600 mb-1">Complexité</p>
-                      <p className="text-xl md:text-2xl font-bold text-secondary-900">
-                        {aiDiagnosis.repairComplexity}
+                      <p className="text-sm text-secondary-600 mb-1">Difficulté</p>
+                      <p className="text-xl md:text-2xl font-bold text-secondary-900 capitalize">
+                        {aiDiagnosis.repairDifficulty === 'easy' ? 'Facile' :
+                         aiDiagnosis.repairDifficulty === 'medium' ? 'Moyenne' : 'Difficile'}
                       </p>
                     </div>
                   </div>
+
+                  {aiDiagnosis.recommendedActions && aiDiagnosis.recommendedActions.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-semibold text-secondary-900 mb-2 text-sm">Actions Recommandées</h4>
+                      <ul className="space-y-1">
+                        {aiDiagnosis.recommendedActions.map((action: string, index: number) => (
+                          <li key={index} className="flex items-start space-x-2">
+                            <CheckCircle className="text-primary-600 flex-shrink-0 mt-0.5" size={14} />
+                            <span className="text-secondary-700 text-xs">{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </Card>
               )}
 
