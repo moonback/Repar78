@@ -12,6 +12,10 @@ import {
   Recycle,
   Home,
   Building,
+  Camera,
+  Video,
+  Play,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Item, Quote } from '../../lib/supabase';
@@ -27,6 +31,8 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSolutionChoice, setShowSolutionChoice] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [showMediaModal, setShowMediaModal] = useState(false);
 
   useEffect(() => {
     loadItemAndQuotes();
@@ -44,6 +50,15 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
         .single();
 
       if (itemError) throw itemError;
+      
+      // Parser les médias JSON si nécessaire
+      if (itemData.images && typeof itemData.images === 'string') {
+        itemData.images = JSON.parse(itemData.images);
+      }
+      if (itemData.videos && typeof itemData.videos === 'string') {
+        itemData.videos = JSON.parse(itemData.videos);
+      }
+      
       setItem(itemData);
 
       const { data: quotesData, error: quotesError } = await supabase
@@ -59,6 +74,24 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fonction pour obtenir tous les médias (images + vidéos)
+  const getAllMedia = () => {
+    if (!item) return [];
+    
+    const images = item.images || [];
+    const videos = item.videos || [];
+    
+    return [
+      ...images.map((url: string) => ({ url, type: 'image' })),
+      ...videos.map((url: string) => ({ url, type: 'video' }))
+    ];
+  };
+
+  const openMediaModal = (index: number) => {
+    setSelectedMediaIndex(index);
+    setShowMediaModal(true);
   };
 
   const acceptQuote = async (quoteId: string) => {
@@ -180,9 +213,79 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
                 </div>
               </div>
 
-              <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center mb-6">
-                <Package className="text-blue-600" size={80} />
-              </div>
+              {/* Galerie de médias */}
+              {getAllMedia().length > 0 ? (
+                <div className="space-y-4 mb-6">
+                  {/* Image/vidéo principale */}
+                  <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                    {getAllMedia()[0]?.type === 'image' ? (
+                      <img
+                        src={getAllMedia()[0].url}
+                        alt={item.name}
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => openMediaModal(0)}
+                      />
+                    ) : (
+                      <div className="relative w-full h-full">
+                        <video
+                          src={getAllMedia()[0].url}
+                          className="w-full h-full object-cover cursor-pointer"
+                          onClick={() => openMediaModal(0)}
+                          controls
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+                          <Play className="text-white" size={48} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Miniatures des autres médias */}
+                  {getAllMedia().length > 1 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {getAllMedia().slice(1, 5).map((media, index) => (
+                        <div
+                          key={index + 1}
+                          className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => openMediaModal(index + 1)}
+                        >
+                          {media.type === 'image' ? (
+                            <img
+                              src={media.url}
+                              alt={`${item.name} ${index + 2}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={media.url}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                                <Play className="text-white" size={20} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {getAllMedia().length > 5 && (
+                        <div className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-600">
+                            +{getAllMedia().length - 5}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center mb-6">
+                  <div className="text-center">
+                    <Package className="text-blue-600 mx-auto mb-2" size={48} />
+                    <p className="text-gray-600 text-sm">Aucune image disponible</p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div>
@@ -367,6 +470,107 @@ export default function ItemDetailPage({ itemId, onNavigate }: ItemDetailPagePro
             </div>
           </div>
         </div>
+
+        {/* Modal pour afficher les médias en plein écran */}
+        {showMediaModal && getAllMedia().length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+            <div className="relative max-w-4xl max-h-full w-full">
+              {/* Bouton de fermeture */}
+              <button
+                onClick={() => setShowMediaModal(false)}
+                className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
+              >
+                <X size={24} />
+              </button>
+
+              {/* Navigation */}
+              {getAllMedia().length > 1 && (
+                <>
+                  <button
+                    onClick={() => setSelectedMediaIndex(Math.max(0, selectedMediaIndex - 1))}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
+                    disabled={selectedMediaIndex === 0}
+                  >
+                    <ArrowLeft size={24} />
+                  </button>
+                  <button
+                    onClick={() => setSelectedMediaIndex(Math.min(getAllMedia().length - 1, selectedMediaIndex + 1))}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-all"
+                    disabled={selectedMediaIndex === getAllMedia().length - 1}
+                  >
+                    <ArrowLeft size={24} className="rotate-180" />
+                  </button>
+                </>
+              )}
+
+              {/* Média principal */}
+              <div className="bg-white rounded-lg overflow-hidden">
+                {getAllMedia()[selectedMediaIndex]?.type === 'image' ? (
+                  <img
+                    src={getAllMedia()[selectedMediaIndex].url}
+                    alt={item.name}
+                    className="w-full h-auto max-h-[80vh] object-contain"
+                  />
+                ) : (
+                  <video
+                    src={getAllMedia()[selectedMediaIndex].url}
+                    className="w-full h-auto max-h-[80vh]"
+                    controls
+                    autoPlay
+                  />
+                )}
+              </div>
+
+              {/* Indicateur de position */}
+              {getAllMedia().length > 1 && (
+                <div className="flex justify-center mt-4 space-x-2">
+                  {getAllMedia().map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedMediaIndex(index)}
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        index === selectedMediaIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Miniatures en bas */}
+              {getAllMedia().length > 1 && (
+                <div className="flex justify-center mt-4 space-x-2 max-w-4xl overflow-x-auto">
+                  {getAllMedia().map((media, index) => (
+                    <div
+                      key={index}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                        index === selectedMediaIndex ? 'border-white' : 'border-transparent'
+                      }`}
+                      onClick={() => setSelectedMediaIndex(index)}
+                    >
+                      {media.type === 'image' ? (
+                        <img
+                          src={media.url}
+                          alt={`${item.name} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="relative w-full h-full bg-gray-800">
+                          <video
+                            src={media.url}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Play className="text-white" size={16} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
