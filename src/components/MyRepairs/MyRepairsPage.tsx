@@ -10,25 +10,47 @@ import {
   Play,
   Camera,
   Video,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Item, Quote } from '../../lib/supabase';
 
 type MyRepairsPageProps = {
-  onNavigate: (page: string, itemId?: string) => void;
+  onNavigate: (page: string, itemId?: string, repairId?: string) => void;
 };
 
 export default function MyRepairsPage({ onNavigate }: MyRepairsPageProps) {
   const { user } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [repairTracking, setRepairTracking] = useState<{[key: string]: string}>({});
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
       loadItems();
+      loadRepairTracking();
     }
   }, [user, filter]);
+
+  const loadRepairTracking = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('repairs')
+        .select('item_id, id')
+        .in('status', ['diagnostic', 'in_repair', 'quality_check', 'ready_delivery', 'completed']);
+
+      if (error) throw error;
+
+      const trackingMap: {[key: string]: string} = {};
+      data?.forEach(repair => {
+        trackingMap[repair.item_id] = repair.id;
+      });
+      setRepairTracking(trackingMap);
+    } catch (error) {
+      console.error('Erreur lors du chargement du tracking:', error);
+    }
+  };
 
   const loadItems = async () => {
     if (!user) return;
@@ -266,6 +288,17 @@ export default function MyRepairsPage({ onNavigate }: MyRepairsPageProps) {
                       <Eye size={16} />
                       <span>Voir Détails</span>
                     </button>
+                    
+                    {/* Bouton de suivi pour les réparations en cours */}
+                    {repairTracking[item.id] && ['in_progress', 'quoted'].includes(item.status) && (
+                      <button
+                        onClick={() => onNavigate('repair-tracking', undefined, repairTracking[item.id])}
+                        className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <ExternalLink size={16} />
+                        <span>Suivre</span>
+                      </button>
+                    )}
                   </div>
 
                   <p className="text-xs text-gray-500 mt-4">

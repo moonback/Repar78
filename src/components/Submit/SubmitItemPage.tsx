@@ -190,6 +190,22 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
       // Mettre à jour le profil utilisateur avec les nouveaux points
       await refreshProfile();
 
+      // Créer une entrée de réparation pour le suivi
+      await supabase.from('repairs').insert({
+        item_id: itemData.id,
+        quote_id: null, // Sera mis à jour quand un devis sera accepté
+        repairer_id: null, // Sera mis à jour quand un réparateur sera assigné
+        status: 'diagnostic',
+        tracking_updates: [{
+          timestamp: new Date().toISOString(),
+          status: 'diagnostic',
+          message: 'Objet soumis, en attente de diagnostic',
+          repairer_id: null
+        }],
+        completion_photos: [],
+        started_at: new Date().toISOString()
+      });
+
       console.log('Soumission réussie !');
       setSuccess(true);
 

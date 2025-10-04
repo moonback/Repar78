@@ -8,21 +8,19 @@ import {
   Eye,
   Send,
   Filter,
-  Award,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Item } from '../../lib/supabase';
+import RepairerRepairManagement from './RepairerRepairManagement';
 
-type RepairerDashboardProps = {
-  onNavigate: (page: string) => void;
-};
-
-export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps) {
+export default function RepairerDashboard() {
   const { user, profile } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'opportunities' | 'repairs' | 'stats'>('opportunities');
 
   const [quoteForm, setQuoteForm] = useState({
     price: '',
@@ -56,21 +54,65 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
     if (!user || !selectedItem) return;
 
     try {
-      const { error } = await supabase.from('quotes').insert({
+      const { data: quoteData, error } = await supabase.from('quotes').insert({
         item_id: selectedItem.id,
         repairer_id: user.id,
         price: parseFloat(quoteForm.price),
         estimated_duration: quoteForm.estimatedDuration,
         message: quoteForm.message,
         status: 'pending',
-      });
+      }).select().single();
 
       if (error) throw error;
 
+      // Mettre à jour le statut de l'objet
       await supabase
         .from('items')
         .update({ status: 'quoted' })
         .eq('id', selectedItem.id);
+
+      // Créer ou mettre à jour l'entrée de réparation
+      const { data: existingRepair } = await supabase
+        .from('repairs')
+        .select('id')
+        .eq('item_id', selectedItem.id)
+        .single();
+
+      if (existingRepair) {
+        // Mettre à jour la réparation existante
+        await supabase
+          .from('repairs')
+          .update({
+            quote_id: quoteData.id,
+            repairer_id: user.id,
+            status: 'diagnostic',
+            tracking_updates: [
+              {
+                timestamp: new Date().toISOString(),
+                status: 'diagnostic',
+                message: 'Devis soumis par le réparateur',
+                repairer_id: user.id
+              }
+            ]
+          })
+          .eq('id', existingRepair.id);
+      } else {
+        // Créer une nouvelle réparation
+        await supabase.from('repairs').insert({
+          item_id: selectedItem.id,
+          quote_id: quoteData.id,
+          repairer_id: user.id,
+          status: 'diagnostic',
+          tracking_updates: [{
+            timestamp: new Date().toISOString(),
+            status: 'diagnostic',
+            message: 'Devis soumis par le réparateur',
+            repairer_id: user.id
+          }],
+          completion_photos: [],
+          started_at: new Date().toISOString()
+        });
+      }
 
       setShowQuoteModal(false);
       setSelectedItem(null);
@@ -92,35 +134,75 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Repairer Dashboard</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord Réparateur</h1>
           <p className="text-lg text-gray-600">
-            Welcome back, {profile?.full_name || 'Repairer'}
+            Bienvenue, {profile?.full_name || 'Réparateur'}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow"
-            >
-              <div className={`inline-flex items-center justify-center w-12 h-12 ${stat.color} rounded-lg mb-3`}>
-                <stat.icon size={24} />
-              </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
-            </div>
-          ))}
+        {/* Onglets */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-8">
+          <button
+            onClick={() => setActiveTab('opportunities')}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all ${
+              activeTab === 'opportunities'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Package size={20} />
+            <span>Nouvelles Opportunités</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('repairs')}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all ${
+              activeTab === 'repairs'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Wrench size={20} />
+            <span>Mes Réparations</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all ${
+              activeTab === 'stats'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <BarChart3 size={20} />
+            <span>Statistiques</span>
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Available Repair Requests</h2>
-            <button className="inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <Filter size={20} />
-              <span>Filter</span>
-            </button>
-          </div>
+        {/* Contenu conditionnel basé sur l'onglet actif */}
+        {activeTab === 'opportunities' && (
+          <>
+            <div className="grid md:grid-cols-4 gap-6 mb-8">
+              {stats.map((stat, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow"
+                >
+                  <div className={`inline-flex items-center justify-center w-12 h-12 ${stat.color} rounded-lg mb-3`}>
+                    <stat.icon size={24} />
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
+                  <p className="text-sm text-gray-600">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Demandes de Réparation Disponibles</h2>
+                <button className="inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Filter size={20} />
+                  <span>Filtrer</span>
+                </button>
+              </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -191,6 +273,7 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
           )}
         </div>
 
+        {/* Modal de détails d'objet */}
         {selectedItem && !showQuoteModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -263,18 +346,21 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
             </div>
           </div>
         )}
+          </>
+        )}
 
+        {/* Modal de devis - en dehors des onglets */}
         {showQuoteModal && selectedItem && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit Quote</h2>
-                <p className="text-gray-600 mb-6">Provide your quote for {selectedItem.name}</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Soumettre un Devis</h2>
+                <p className="text-gray-600 mb-6">Proposez votre devis pour {selectedItem.name}</p>
 
                 <div className="space-y-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Price ($)
+                      Prix (€)
                     </label>
                     <input
                       type="number"
@@ -287,7 +373,7 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estimated Duration
+                      Durée Estimée
                     </label>
                     <input
                       type="text"
@@ -295,20 +381,20 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
                       onChange={(e) =>
                         setQuoteForm({ ...quoteForm, estimatedDuration: e.target.value })
                       }
-                      placeholder="2-3 days"
+                      placeholder="2-3 jours"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Message (Optional)
+                      Message (Optionnel)
                     </label>
                     <textarea
                       value={quoteForm.message}
                       onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
                       rows={4}
-                      placeholder="Additional details about the repair..."
+                      placeholder="Détails supplémentaires sur la réparation..."
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"
                     />
                   </div>
@@ -322,17 +408,33 @@ export default function RepairerDashboard({ onNavigate }: RepairerDashboardProps
                     }}
                     className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    Cancel
+                    Annuler
                   </button>
                   <button
                     onClick={submitQuote}
                     disabled={!quoteForm.price || !quoteForm.estimatedDuration}
                     className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
                   >
-                    Submit Quote
+                    Soumettre le Devis
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Onglet des réparations actives */}
+        {activeTab === 'repairs' && user && (
+          <RepairerRepairManagement repairerId={user.id} />
+        )}
+
+        {/* Onglet des statistiques */}
+        {activeTab === 'stats' && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Statistiques</h2>
+            <div className="text-center py-12">
+              <BarChart3 className="mx-auto text-gray-400 mb-4" size={64} />
+              <p className="text-gray-600">Fonctionnalité en développement</p>
             </div>
           </div>
         )}

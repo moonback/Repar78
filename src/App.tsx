@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Navbar from './components/Layout/Navbar';
 import AuthModal from './components/Auth/AuthModal';
 import HomePage from './components/Home/HomePage';
@@ -9,11 +10,13 @@ import ItemDetailPage from './components/ItemDetail/ItemDetailPage';
 import RepairerDashboard from './components/RepairerDashboard/RepairerDashboard';
 import MarketplacePage from './components/Marketplace/MarketplacePage';
 import ProfilePage from './components/Profile/ProfilePage';
+import RepairTrackingPage from './components/RepairTracking/RepairTrackingPage';
 
 function AppContent() {
   const { loading, user, profile, refreshProfile } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Forcer le rechargement du profil si l'utilisateur est connecté mais le profil n'est pas chargé
@@ -41,10 +44,13 @@ function AppContent() {
     }
   }, [user, profile, loading, refreshProfile]);
 
-  const handleNavigate = (page: string, itemId?: string) => {
+  const handleNavigate = (page: string, itemId?: string, repairId?: string) => {
     setCurrentPage(page);
     if (itemId) {
       setSelectedItemId(itemId);
+    }
+    if (repairId) {
+      setSelectedRepairId(repairId);
     }
   };
 
@@ -85,11 +91,15 @@ function AppContent() {
         <ItemDetailPage itemId={selectedItemId} onNavigate={handleNavigate} />
       )}
 
-      {currentPage === 'repairer-dashboard' && <RepairerDashboard onNavigate={handleNavigate} />}
+      {currentPage === 'repairer-dashboard' && <RepairerDashboard />}
 
       {currentPage === 'marketplace' && <MarketplacePage onNavigate={handleNavigate} />}
 
       {currentPage === 'profile' && <ProfilePage onNavigate={handleNavigate} />}
+
+      {currentPage === 'repair-tracking' && selectedRepairId && (
+        <RepairTrackingPage repairId={selectedRepairId} onNavigate={handleNavigate} />
+      )}
 
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
@@ -191,9 +201,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 
