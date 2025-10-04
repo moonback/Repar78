@@ -3,6 +3,11 @@ import { Upload, Camera, Video, Sparkles, AlertCircle, CheckCircle, X, Plus } fr
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { uploadMultipleFiles, deleteFile, BUCKETS, validateFile } from '../../lib/storage';
+import Button from '../UI/Button';
+import Card from '../UI/Card';
+import Input from '../UI/Input';
+import Alert from '../UI/Alert';
+import LoadingSpinner from '../UI/LoadingSpinner';
 
 type SubmitItemPageProps = {
   onNavigate: (page: string) => void;
@@ -252,52 +257,47 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white py-8">
+      <div className="container-mobile">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Soumettre votre Objet</h1>
-          <p className="text-lg text-gray-600">
+          <h1 className="text-xl md:text-2xl font-bold text-secondary-900 mb-2">Soumettre votre Objet</h1>
+          <p className="text-sm text-secondary-600">
             Faisons réparer votre objet et gagnez des points éco
           </p>
         </div>
 
         {/* Messages d'erreur et de succès */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="text-red-600" size={20} />
-              <p className="text-red-700">{error}</p>
-            </div>
-          </div>
+          <Alert type="error" className="mb-6">
+            {error}
+          </Alert>
         )}
 
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="text-green-600" size={20} />
-              <p className="text-green-700">Objet soumis avec succès ! Redirection vers vos réparations...</p>
-            </div>
-          </div>
+          <Alert type="success" className="mb-6">
+            Objet soumis avec succès ! Redirection vers vos réparations...
+          </Alert>
         )}
 
+        {/* Indicateur de progression */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                  className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold transition-all ${
                     s === step
-                      ? 'bg-emerald-600 text-white scale-110'
+                      ? 'bg-primary-600 text-white scale-110'
                       : s < step
-                      ? 'bg-emerald-200 text-emerald-700'
-                      : 'bg-gray-200 text-gray-500'
+                      ? 'bg-primary-200 text-primary-700'
+                      : 'bg-secondary-200 text-secondary-500'
                   }`}
                 >
-                  {s < step ? <CheckCircle size={20} /> : s}
+                  {s < step ? <CheckCircle size={16} /> : s}
                 </div>
                 {s < 3 && (
                   <div
-                    className={`w-16 h-1 mx-2 ${s < step ? 'bg-emerald-200' : 'bg-gray-200'}`}
+                    className={`w-8 md:w-16 h-1 mx-1 md:mx-2 ${s < step ? 'bg-primary-200' : 'bg-secondary-200'}`}
                   />
                 )}
               </div>
@@ -305,33 +305,28 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <Card className="p-6 md:p-8">
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Détails de l'Objet</h2>
+              <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Détails de l'Objet</h2>
+
+              <Input
+                label="Nom de l'objet *"
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="ex: iPhone 12 Pro"
+                required
+              />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom de l'objet *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="ex: iPhone 12 Pro"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">Catégorie *</label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  className="input-field"
                 >
                   {categories.map((cat) => (
                     <option key={cat.value} value={cat.value}>
@@ -341,22 +336,17 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Marque (optionnel)
-                </label>
-                <input
-                  type="text"
-                  name="brand"
-                  value={formData.brand}
-                  onChange={handleInputChange}
-                  placeholder="ex: Apple, Samsung, etc."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                />
-              </div>
+              <Input
+                label="Marque (optionnel)"
+                type="text"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                placeholder="ex: Apple, Samsung, etc."
+              />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
                   Description du problème *
                 </label>
                 <textarea
@@ -365,44 +355,45 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                   onChange={handleInputChange}
                   rows={4}
                   placeholder="Décrivez ce qui ne va pas avec votre objet..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"
+                  className="input-field resize-none"
                   required
                 />
               </div>
 
-              <button
+              <Button
                 onClick={() => setStep(2)}
                 disabled={!formData.name || !formData.problemDescription}
-                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 Suivant : Télécharger des Médias
-              </button>
+              </Button>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Télécharger Photos & Vidéos</h2>
+              <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Télécharger Photos & Vidéos</h2>
 
               {/* Zone de téléchargement */}
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-emerald-400 transition-colors">
-                <Upload className="mx-auto text-gray-400 mb-4" size={48} />
-                <p className="text-gray-600 mb-2">
+              <div className="border-2 border-dashed border-secondary-300 rounded-xl p-8 md:p-12 text-center hover:border-primary-400 transition-colors">
+                <Upload className="mx-auto text-secondary-400 mb-4" size={48} />
+                <p className="text-secondary-600 mb-2 text-sm md:text-base">
                   Glissez-déposez vos fichiers ici, ou cliquez pour sélectionner
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-secondary-500">
                   Les photos et vidéos nous aident à diagnostiquer le problème
                 </p>
 
-                <div className="flex justify-center gap-4 mt-6">
-                  <button 
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                  <Button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={loading}
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="secondary"
+                    className="inline-flex items-center space-x-2"
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+                        <LoadingSpinner size="sm" />
                         <span>Upload...</span>
                       </>
                     ) : (
@@ -411,15 +402,16 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                         <span>Ajouter des Photos</span>
                       </>
                     )}
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={loading}
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="outline"
+                    className="inline-flex items-center space-x-2"
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-purple-700 border-t-transparent rounded-full animate-spin" />
+                        <LoadingSpinner size="sm" />
                         <span>Upload...</span>
                       </>
                     ) : (
@@ -428,7 +420,7 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                         <span>Ajouter des Vidéos</span>
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
 
                 <input
@@ -456,20 +448,20 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                 <div className="space-y-4">
                   {images.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Photos ({images.length})</h3>
+                      <h3 className="text-lg font-semibold text-secondary-900 mb-2">Photos ({images.length})</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {images.map((image, index) => (
                           <div key={index} className="relative group">
                             <img
                               src={image}
                               alt={`Photo ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg"
+                              className="w-full h-20 md:h-24 object-cover rounded-lg"
                             />
                             <button
                               onClick={() => removeMedia(image, 'images')}
                               className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                              <X size={16} />
+                              <X size={14} />
                             </button>
                           </div>
                         ))}
@@ -479,17 +471,17 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
 
                   {videos.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Vidéos ({videos.length})</h3>
+                      <h3 className="text-lg font-semibold text-secondary-900 mb-2">Vidéos ({videos.length})</h3>
                       <div className="space-y-2">
                         {videos.map((video, index) => (
-                          <div key={index} className="relative group flex items-center space-x-3 bg-gray-100 rounded-lg p-3">
-                            <Video className="text-purple-600" size={24} />
-                            <span className="text-gray-700 flex-1">Vidéo {index + 1}</span>
+                          <div key={index} className="relative group flex items-center space-x-3 bg-secondary-100 rounded-lg p-3">
+                            <Video className="text-primary-600" size={24} />
+                            <span className="text-secondary-700 flex-1">Vidéo {index + 1}</span>
                             <button
                               onClick={() => removeMedia(video, 'videos')}
                               className="bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                              <X size={16} />
+                              <X size={14} />
                             </button>
                           </div>
                         ))}
@@ -499,61 +491,55 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                 </div>
               )}
 
-              <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-6 border border-emerald-200">
+              <Card className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
                 <div className="flex items-start space-x-3">
-                  <Sparkles className="text-emerald-600 flex-shrink-0 mt-1" size={24} />
+                  <Sparkles className="text-primary-600 flex-shrink-0 mt-1" size={24} />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Diagnostic IA</h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <h3 className="font-semibold text-secondary-900 mb-1">Diagnostic IA</h3>
+                    <p className="text-sm text-secondary-600 mb-4">
                       Notre IA analysera vos photos et fournira une estimation de coût et des solutions possibles
                     </p>
-                    <button
+                    <Button
                       onClick={simulateAIDiagnosis}
                       disabled={aiDiagnosing}
-                      className="inline-flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                      loading={aiDiagnosing}
+                      size="sm"
+                      className="inline-flex items-center space-x-2"
                     >
-                      {aiDiagnosing ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Analyse en cours...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={16} />
-                          <span>Lancer le Diagnostic IA</span>
-                        </>
-                      )}
-                    </button>
+                      <Sparkles size={16} />
+                      <span>Lancer le Diagnostic IA</span>
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="flex gap-4">
-                <button
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
                   onClick={() => setStep(1)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Retour
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setStep(3)}
-                  className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                  className="flex-1"
                 >
                   Passer aux Solutions
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Résultats du Diagnostic IA</h2>
+              <h2 className="text-lg md:text-xl font-bold text-secondary-900 mb-4">Résultats du Diagnostic IA</h2>
 
               {aiDiagnosis && (
-                <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-6 border border-emerald-200">
+                <Card className="p-6 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Problèmes Détectés</h3>
-                    <span className="px-3 py-1 bg-emerald-600 text-white text-sm rounded-full">
+                    <h3 className="font-semibold text-secondary-900">Problèmes Détectés</h3>
+                    <span className="px-3 py-1 bg-primary-600 text-white text-sm rounded-full">
                       {Math.round(aiDiagnosis.confidence * 100)}% Confiance
                     </span>
                   </div>
@@ -562,68 +548,70 @@ export default function SubmitItemPage({ onNavigate }: SubmitItemPageProps) {
                     {aiDiagnosis.detectedIssues.map((issue: string, index: number) => (
                       <li key={index} className="flex items-start space-x-2">
                         <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
-                        <span className="text-gray-700">{issue}</span>
+                        <span className="text-secondary-700 text-sm">{issue}</span>
                       </li>
                     ))}
                   </ul>
 
                   <div className="grid grid-cols-2 gap-4 bg-white rounded-lg p-4">
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Coût Estimé</p>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-sm text-secondary-600 mb-1">Coût Estimé</p>
+                      <p className="text-xl md:text-2xl font-bold text-secondary-900">
                         {aiDiagnosis.estimatedCostMin}€ - {aiDiagnosis.estimatedCostMax}€
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Complexité</p>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-sm text-secondary-600 mb-1">Complexité</p>
+                      <p className="text-xl md:text-2xl font-bold text-secondary-900">
                         {aiDiagnosis.repairComplexity}
                       </p>
                     </div>
                   </div>
-                </div>
+                </Card>
               )}
 
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+              <Card className="p-6 bg-blue-50 border border-blue-200">
                 <p className="text-sm text-blue-800 mb-2 font-medium">Prochaines Étapes</p>
-                <p className="text-gray-700">
+                <p className="text-secondary-700 text-sm">
                   Votre objet sera visible par les réparateurs vérifiés qui pourront fournir des devis détaillés.
                   Vous recevrez des notifications quand les devis arrivent.
                 </p>
-              </div>
+              </Card>
 
-              <div className="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
+              <Card className="p-6 bg-gradient-to-br from-primary-50 to-primary-100 border border-primary-200">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-emerald-600 text-white p-2 rounded-lg">
+                  <div className="bg-primary-600 text-white p-2 rounded-lg">
                     <Sparkles size={20} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Gagnez 10 Points Éco</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="font-semibold text-secondary-900">Gagnez 10 Points Éco</p>
+                    <p className="text-sm text-secondary-600">
                       Pour avoir soumis un objet à réparer au lieu de le jeter
                     </p>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="flex gap-4">
-                <button
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
                   onClick={() => setStep(2)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Retour
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleSubmit}
                   disabled={loading || success}
-                  className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  loading={loading}
+                  className="flex-1"
                 >
-                  {loading ? 'Soumission en cours...' : success ? 'Soumis !' : 'Soumettre l\'Objet'}
-                </button>
+                  {success ? 'Soumis !' : 'Soumettre l\'Objet'}
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

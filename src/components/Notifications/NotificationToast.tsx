@@ -1,75 +1,67 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
-type NotificationType = 'success' | 'error' | 'info' | 'warning';
-
-type NotificationToastProps = {
-  type: NotificationType;
+interface NotificationToastProps {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
   title: string;
-  message: string;
+  message?: string;
   duration?: number;
-  onClose: () => void;
-};
+  onClose: (id: string) => void;
+}
 
 export default function NotificationToast({
+  id,
   type,
   title,
   message,
   duration = 5000,
   onClose,
 }: NotificationToastProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onClose, 300); // Attendre l'animation de sortie
+    // Animation d'entrée
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    
+    // Auto-fermeture
+    const closeTimer = setTimeout(() => {
+      handleClose();
     }, duration);
 
-    return () => clearTimeout(timer);
-  }, [duration, onClose]);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(closeTimer);
+    };
+  }, [duration]);
 
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="text-green-600" size={20} />;
-      case 'error':
-        return <AlertCircle className="text-red-600" size={20} />;
-      case 'warning':
-        return <AlertCircle className="text-yellow-600" size={20} />;
-      case 'info':
-      default:
-        return <Info className="text-blue-600" size={20} />;
-    }
+  const handleClose = () => {
+    setIsVisible(false);
+    setTimeout(() => onClose(id), 300);
   };
 
-  const getBackgroundColor = () => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-50 border-green-200';
-      case 'error':
-        return 'bg-red-50 border-red-200';
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200';
-      case 'info':
-      default:
-        return 'bg-blue-50 border-blue-200';
-    }
+  const icons = {
+    success: CheckCircle,
+    error: AlertCircle,
+    warning: AlertCircle,
+    info: Info,
   };
 
-  const getTextColor = () => {
-    switch (type) {
-      case 'success':
-        return 'text-green-800';
-      case 'error':
-        return 'text-red-800';
-      case 'warning':
-        return 'text-yellow-800';
-      case 'info':
-      default:
-        return 'text-blue-800';
-    }
+  const colors = {
+    success: 'bg-green-50 border-green-200 text-green-800',
+    error: 'bg-red-50 border-red-200 text-red-800',
+    warning: 'bg-amber-50 border-amber-200 text-amber-800',
+    info: 'bg-blue-50 border-blue-200 text-blue-800',
   };
+
+  const iconColors = {
+    success: 'text-green-600',
+    error: 'text-red-600',
+    warning: 'text-amber-600',
+    info: 'text-blue-600',
+  };
+
+  const Icon = icons[type];
 
   return (
     <div
@@ -77,21 +69,21 @@ export default function NotificationToast({
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       }`}
     >
-      <div className={`${getBackgroundColor()} border rounded-lg shadow-lg p-4`}>
-        <div className="flex items-start space-x-3">
-          {getIcon()}
-          <div className="flex-1">
-            <h4 className={`font-semibold text-sm ${getTextColor()}`}>{title}</h4>
-            <p className={`text-sm mt-1 ${getTextColor()} opacity-90`}>{message}</p>
+      <div className={`rounded-xl border p-4 shadow-medium ${colors[type]}`}>
+        <div className="flex items-start">
+          <Icon className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${iconColors[type]}`} />
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm">{title}</h4>
+            {message && (
+              <p className="text-sm mt-1 opacity-90">{message}</p>
+            )}
           </div>
           <button
-            onClick={() => {
-              setIsVisible(false);
-              setTimeout(onClose, 300);
-            }}
-            className={`${getTextColor()} opacity-60 hover:opacity-100 transition-opacity`}
+            onClick={handleClose}
+            className="ml-3 flex-shrink-0 hover:opacity-70 transition-opacity"
+            aria-label="Fermer"
           >
-            <X size={16} />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>

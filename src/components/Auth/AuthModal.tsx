@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { X, Leaf } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import Button from '../UI/Button';
+import Input from '../UI/Input';
+import Alert from '../UI/Alert';
+import Card from '../UI/Card';
 
 type AuthModalProps = {
   isOpen: boolean;
@@ -68,91 +72,80 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full relative">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 safe-area-inset">
+      <Card className="max-w-md w-full relative animate-slide-up">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute right-4 top-4 text-secondary-400 hover:text-secondary-600 transition-colors z-10"
         >
           <X size={24} />
         </button>
 
-        <div className="p-8">
+        <div className="p-6 md:p-8">
           <div className="flex items-center justify-center mb-6">
-            <div className="bg-emerald-100 p-3 rounded-full">
-              <Leaf className="text-emerald-600" size={32} />
+            <div className="bg-primary-100 p-3 rounded-full">
+              <Leaf className="text-primary-600" size={32} />
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+          <h2 className="text-xl font-bold text-center text-secondary-800 mb-2">
             {mode === 'signin' ? 'Bon retour !' : 'Rejoignez l\'Économie Circulaire'}
           </h2>
-          <p className="text-center text-gray-600 mb-6">
+          <p className="text-center text-secondary-600 mb-6 text-xs">
             {mode === 'signin'
               ? 'Connectez-vous pour continuer votre parcours de réparation'
               : 'Créez un compte pour commencer à réparer'}
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <Alert type="error" className="mb-4">
               {error}
-            </div>
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom complet
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  placeholder="Votre nom complet"
-                  autoComplete="name"
-                  required
-                />
-              </div>
+              <Input
+                label="Nom complet"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Votre nom complet"
+                autoComplete="name"
+                required
+              />
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                placeholder="votre@email.com"
-                autoComplete="email"
-                required
-              />
-            </div>
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="votre@email.com"
+              autoComplete="email"
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                placeholder="••••••••"
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                required
-                minLength={6}
-              />
-            </div>
+            <Input
+              label="Mot de passe"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              required
+              minLength={6}
+            />
 
             {mode === 'signup' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
                   Je souhaite
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  className="input-field"
                 >
                   <option value="user">Faire réparer mes objets</option>
                   <option value="repairer">Proposer des services de réparation</option>
@@ -162,13 +155,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={loading}
+              className="w-full"
             >
-              {loading ? 'Veuillez patienter...' : mode === 'signin' ? 'Se connecter' : 'Créer un compte'}
-            </button>
+              {mode === 'signin' ? 'Se connecter' : 'Créer un compte'}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
@@ -177,7 +171,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 setMode(mode === 'signin' ? 'signup' : 'signin');
                 setError('');
               }}
-              className="text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-primary-600 hover:text-primary-700 font-medium text-xs"
             >
               {mode === 'signin'
                 ? "Pas de compte ? S'inscrire"
@@ -185,7 +179,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

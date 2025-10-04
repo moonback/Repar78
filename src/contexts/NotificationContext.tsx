@@ -75,11 +75,12 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         {notifications.map(notification => (
           <NotificationToast
             key={notification.id}
+            id={notification.id}
             type={notification.type}
             title={notification.title}
             message={notification.message}
             duration={notification.duration}
-            onClose={() => removeNotification(notification.id)}
+            onClose={removeNotification}
           />
         ))}
       </div>
